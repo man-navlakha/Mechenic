@@ -1,167 +1,310 @@
 import React, { useState } from 'react';
 import { 
-  ChevronDown, DollarSign, List, Star, Car, Route, Clock, Phone, X, Check 
+  Car, Route, DollarSign, Clock, Phone, MapPin, User, Wrench 
 } from 'lucide-react';
 
-// New Component for the Job Request Panel
-const NewJobRequest = ({ onReject }) => {
+// Shadcn/ui components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+
+// New Job Request Component with shadcn/ui
+const NewJobRequest = ({ onReject, onAccept }) => {
   return (
-    <div className="w-full h-full flex flex-col font-sans bg-white rounded-lg shadow-xl">
-      {/* Header */}
-      <div className="p-4 border-b">
+    <Card className="w-full h-full flex flex-col shadow-lg border-0">
+      <CardHeader className="pb-3 bg-gradient-to-r from-red-50 to-orange-50">
         <div className="flex items-center space-x-3">
           <div className="bg-red-100 p-2 rounded-full">
-            <Car className="text-red-500" size={24} />
+            <Car className="text-red-600" size={24} />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Car Assistance</h3>
-            <p className="text-sm text-gray-600">Customer needs help with puncture repair</p>
+            <CardTitle className="text-lg">Car Assistance</CardTitle>
+            <CardDescription>Customer needs help with puncture repair</CardDescription>
           </div>
         </div>
-      </div>
+      </CardHeader>
 
-      {/* Quick Info */}
-      <div className="grid grid-cols-2 gap-4 p-4">
-        <div className="bg-gray-100 p-3 rounded-lg text-center">
-          <Route className="text-blue-500 mx-auto mb-1" size={20} />
-          <p className="font-semibold text-lg">1.5 km</p>
-          <p className="text-xs text-gray-500">Distance</p>
+      <CardContent className="flex-1 p-4 space-y-4">
+        {/* Quick Info Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="text-center p-3">
+            <Route className="text-blue-500 mx-auto mb-2" size={20} />
+            <p className="font-semibold text-lg">1.5 km</p>
+            <p className="text-xs text-muted-foreground">Distance</p>
+          </Card>
+          <Card className="text-center p-3">
+            <DollarSign className="text-green-500 mx-auto mb-2" size={20} />
+            <p className="font-semibold text-lg">₹165</p>
+            <p className="text-xs text-muted-foreground">Earnings</p>
+          </Card>
         </div>
-        <div className="bg-gray-100 p-3 rounded-lg text-center">
-          <DollarSign className="text-green-500 mx-auto mb-1" size={20} />
-          <p className="font-semibold text-lg">₹165</p>
-          <p className="text-xs text-gray-500">Earnings</p>
-        </div>
-      </div>
-      
-      {/* Job Details */}
-      <div className="px-4 space-y-2 text-sm text-gray-700">
-        <div className="flex justify-between">
-          <span>Request ID:</span>
-          <span className="font-mono">#1575775795880</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Vehicle Type:</span>
-          <span>Car</span>
-        </div>
-         <div className="flex justify-between">
-          <span>Requested:</span>
-          <span>3:32:38 PM</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Estimated Time:</span>
-          <span>5 mins</span>
-        </div>
-      </div>
 
-      {/* Customer Contact Info */}
-      <div className="m-4 mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-        <div className="flex items-start space-x-2">
-          <Phone className="text-blue-500 mt-1 flex-shrink-0" size={16} />
-          <div>
-            <h4 className="font-semibold">Customer Contact</h4>
-            <p className="text-xs text-gray-600">After accepting, you'll get the customer's contact details so you can call them directly.</p>
+        {/* Job Details */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Request ID:</span>
+            <Badge variant="secondary">#1575775795880</Badge>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Vehicle Type:</span>
+            <span className="font-medium">Car</span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Requested:</span>
+            <span className="font-medium">3:32:38 PM</span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Estimated Time:</span>
+            <Badge variant="outline">5 mins</Badge>
           </div>
         </div>
-      </div>
 
-      <div className="flex-grow"></div> {/* Pushes buttons to the bottom */}
-      
+        {/* Customer Info */}
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-3">
+            <div className="flex items-start space-x-2">
+              <User className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
+              <div>
+                <h4 className="font-semibold text-sm">Customer Details</h4>
+                <p className="text-xs text-muted-foreground">
+                  After accepting, you'll get customer contact details
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Location Info */}
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="p-3">
+            <div className="flex items-start space-x-2">
+              <MapPin className="text-green-600 mt-0.5 flex-shrink-0" size={16} />
+              <div>
+                <h4 className="font-semibold text-sm">Location</h4>
+                <p className="text-xs text-muted-foreground">
+                  Near City Center, Ahmedabad
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </CardContent>
+
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-3 p-4 border-t mt-4">
-        <button 
-          onClick={onReject}
-          className="w-full flex items-center justify-center space-x-2 py-3 bg-gray-700 text-white font-semibold rounded-lg hover:bg-black transition-colors"
-        >
-          <X size={20} />
-          <span>Reject</span>
-        </button>
-        <button className="w-full flex items-center justify-center space-x-2 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors">
-          <Check size={20} />
-          <span>Accept Job</span>
-        </button>
+      <div className="p-4 border-t bg-muted/20">
+        <div className="grid grid-cols-2 gap-3">
+          <Button 
+            variant="outline" 
+            onClick={onReject}
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+          >
+            Reject
+          </Button>
+          <Button 
+            onClick={onAccept}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            Accept Job
+          </Button>
+        </div>
       </div>
+    </Card>
+  );
+};
+
+// Earnings Summary Component
+const EarningsSummary = () => {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <DollarSign className="text-green-500" size={20} />
+          Earnings Summary
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Today</span>
+            <span className="font-semibold">₹1,250</span>
+          </div>
+          <Progress value={65} className="h-2" />
+        </div>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>This Week</span>
+            <span className="font-semibold">₹8,750</span>
+          </div>
+          <Progress value={85} className="h-2" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 pt-2">
+          <div className="text-center p-3 bg-muted rounded-lg">
+            <p className="text-2xl font-bold text-green-600">₹42K</p>
+            <p className="text-xs text-muted-foreground">This Month</p>
+          </div>
+          <div className="text-center p-3 bg-muted rounded-lg">
+            <p className="text-2xl font-bold text-blue-600">127</p>
+            <p className="text-xs text-muted-foreground">Total Jobs</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Available Requests Component
+const AvailableRequests = ({ isOnline }) => {
+  const requests = [
+    { id: 1, service: "Battery Jumpstart", distance: "2.1km", payout: "₹700", time: "5 min ago" },
+    { id: 2, service: "Flat Tire Repair", distance: "1.8km", payout: "₹500", time: "8 min ago" },
+    { id: 3, service: "Engine Check", distance: "3.2km", payout: "₹1200", time: "12 min ago" },
+  ];
+
+  if (!isOnline) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <Wrench className="mx-auto text-muted-foreground mb-2" size={32} />
+          <p className="text-muted-foreground">Go online to see available requests</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {requests.map((request) => (
+        <Card key={request.id} className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start mb-2">
+              <h4 className="font-semibold">{request.service}</h4>
+              <Badge variant="secondary">{request.payout}</Badge>
+            </div>
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Route size={14} />
+                {request.distance}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock size={14} />
+                {request.time}
+              </span>
+            </div>
+            <Button size="sm" className="w-full mt-3">
+              View Details
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };
 
-
 const RightPanel = ({ isOnline, setIsOnline }) => {
-  const toggleOnlineStatus = () => setIsOnline(!isOnline);
-  
-  // State to control which panel is visible
   const [newRequest, setNewRequest] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
-  // If there's a new request, show the NewJobRequest component
+  const handleAcceptJob = () => {
+    console.log("Job accepted!");
+    setNewRequest(false);
+    // Add your job acceptance logic here
+  };
+
+  const toggleOnlineStatus = () => setIsOnline(!isOnline);
+
   if (newRequest) {
     return (
-      <div className="absolute top-4 right-4 w-80 h-[calc(100vh-8rem)] z-10">
-        <NewJobRequest onReject={() => setNewRequest(false)} />
+      <div className="absolute top-4 right-4 w-80 h-[calc(100vh-8rem)] z-20">
+        <NewJobRequest 
+          onReject={() => setNewRequest(false)}
+          onAccept={handleAcceptJob}
+        />
       </div>
     );
   }
 
-  // Otherwise, show the default panel
   return (
-    <div className="absolute top-4 right-4 w-80 h-[calc(100vh-8rem)] bg-white/80 backdrop-blur-sm rounded-lg shadow-xl z-10 p-4 flex flex-col font-sans">
-      {/* Online/Offline Toggle */}
-      <div className="flex flex-col items-center border-b pb-4">
-        <label htmlFor="online-toggle" className="relative inline-flex items-center cursor-pointer">
-          <input 
-            type="checkbox" 
-            checked={isOnline}
-            onChange={toggleOnlineStatus}
-            id="online-toggle" 
-            className="sr-only peer" 
-          />
-          <div className="w-14 h-7 bg-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-        </label>
-        <p className={`mt-2 font-medium ${isOnline ? 'text-green-600' : 'text-red-500'}`}>
-          {isOnline ? "You are online" : "Go online to start receiving jobs"}
-        </p>
-      </div>
-
-      {/* Panel Content */}
-      <div className="mt-4 flex-grow overflow-y-auto space-y-3">
-        {/* Test Button for New Request */}
-        <div className="p-2">
-            <button 
-                onClick={() => setNewRequest(true)}
-                className="w-full bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors"
-            >
-                Simulate New Request
-            </button>
-        </div>
-
-        {/* Available Requests */}
-        <details className="group">
-          <summary className="flex justify-between items-center font-semibold cursor-pointer p-2 rounded-md hover:bg-gray-200">
+    <div className="absolute top-4 right-4 w-80 h-[calc(100vh-8rem)] z-10">
+      <Card className="h-full shadow-xl border-0">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl">Mechanic Dashboard</CardTitle>
             <div className="flex items-center space-x-2">
-              <List className="text-blue-500" />
-              <span>Available Requests</span>
+              <Switch
+                checked={isOnline}
+                onCheckedChange={setIsOnline}
+                id="online-status"
+              />
+              <Label htmlFor="online-status" className="text-sm">
+                {isOnline ? 'Online' : 'Offline'}
+              </Label>
             </div>
-            <ChevronDown className="h-5 w-5 transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="p-2 text-sm text-gray-600">
-            {isOnline ? 'Searching for nearby requests...' : 'Go online to see requests.'}
           </div>
-        </details>
-        
-        {/* Other sections... */}
-        <details className="group">
-          <summary className="flex justify-between items-center font-semibold cursor-pointer p-2 rounded-md hover:bg-gray-200">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="text-green-500" />
-              <span>Earnings</span>
-            </div>
-            <ChevronDown className="h-5 w-5 transition-transform group-open:rotate-180" />
-          </summary>
-          <p className="p-2 text-sm text-gray-600">
-            Your weekly and monthly earnings summaries will be displayed here.
-          </p>
-        </details>
-        {/* ...etc */}
-      </div>
+          <CardDescription>
+            {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
+          </CardDescription>
+        </CardHeader>
+
+        <Separator />
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="earnings">Earnings</TabsTrigger>
+          </TabsList>
+
+          <ScrollArea className="h-[calc(100vh-12rem)]">
+            <TabsContent value="overview" className="p-4 space-y-4">
+              {/* Status Card */}
+              <Card className={isOnline ? "bg-green-50 border-green-200" : "bg-gray-50"}>
+                <CardContent className="p-4">
+                  <div className="text-center">
+                    <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${isOnline ? 'bg-green-100' : 'bg-gray-100'} mb-2`}>
+                      <Wrench className={isOnline ? "text-green-600" : "text-gray-400"} size={24} />
+                    </div>
+                    <h3 className={`font-semibold ${isOnline ? 'text-green-700' : 'text-gray-600'}`}>
+                      {isOnline ? 'Active and Available' : 'Offline Mode'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {isOnline ? 'Receiving job requests' : 'Go online to start working'}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Test New Request Button */}
+              <Button 
+                onClick={() => setNewRequest(true)}
+                variant="outline" 
+                className="w-full border-dashed"
+                disabled={!isOnline}
+              >
+                Simulate New Job Request
+              </Button>
+
+              {/* Available Requests */}
+              <div>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Route size={16} />
+                  Available Requests
+                </h4>
+                <AvailableRequests isOnline={isOnline} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="earnings" className="p-4">
+              <EarningsSummary />
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+      </Card>
     </div>
   );
 };

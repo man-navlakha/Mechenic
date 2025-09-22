@@ -36,7 +36,24 @@ This project was brought to life by:
 
 > ![Alt](https://repobeats.axiom.co/api/embed/de4cf7816ee7077e7d887c620d88314ac5663b66.svg "Repobeats analytics image")
 
-
+> 
+> your-project/
+> ├── src/
+> │   ├── components/
+> │   │   ├── ui/
+> │   │   │   ├── button.jsx
+> │   │   │   ├── input.jsx
+> │   │   │   ├── label.jsx
+> │   │   │   └── card.jsx
+> │   │   └── LoginForm.jsx
+> │   ├── App.jsx
+> │   ├── main.jsx
+> │   └── index.css
+> ├── vite.config.js
+> ├── jsconfig.json
+> ├── tailwind.config.js
+> └── components.json 
+>
 ## 💬 Feedback
 
 #### We'd love to hear your feedback\! If you have any suggestions or encounter issues, please reach out to us at `mechanicsetu@gmail.com`.
