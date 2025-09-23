@@ -8,6 +8,7 @@ import Dashboard from "./mechanic/Dashboard";
 
 import Login from "./components/LoginForm";
 import Logout from "./components/Logout";
+import OTP from './components/Otppage';
 
 
 
@@ -61,9 +62,9 @@ const AppContent = () => {
           <Route path="/Login" element={
             <Login />
           } />
-          {/* <Route path="/verify" element={
+          <Route path="/verify" element={
             <OTP />
-          } /> */}
+          } />
           <Route path="/logout" element={
             <Logout />
           } />
