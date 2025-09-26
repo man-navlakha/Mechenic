@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import {
   User, MapPin, Phone, Mail, Navigation, Building,
-  ArrowLeft, Save, Loader2
+  ArrowLeft, Save, Loader2, Store, Image
 } from 'lucide-react';
 import api from '@/utils/api';
 import PlacePickerGujarat from '@/components/PlacePickerGujarat';
@@ -26,14 +26,18 @@ const MechanicForm = () => {
 
   // Form state
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    shopAddress: '',
-    shopLatitude: '',
-    shopLongitude: ''
-  });
+  first_name: '',
+  last_name: '',
+  email: '',
+  mobile_number: '',
+  profile_pic: '', // File
+  shop_name: '',
+  shop_address: '',
+  shop_latitude: '',
+  shop_longitude: ''
+});
+
+
 
   // Auto-detect location state
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
@@ -42,13 +46,6 @@ const MechanicForm = () => {
   // Progress tracking
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
-
-  // Get email from navigation state (from login/OTP flow)
-  useEffect(() => {
-    if (state?.email) {
-      setFormData(prev => ({ ...prev, email: state.email }));
-    }
-  }, [state]);
 
   // Calculate form completion percentage
   const calculateProgress = () => {
@@ -78,8 +75,8 @@ const MechanicForm = () => {
         const { latitude, longitude } = position.coords;
         setFormData(prev => ({
           ...prev,
-          shopLatitude: latitude.toString(),
-          shopLongitude: longitude.toString()
+          shop_latitude: latitude.toString(),
+          shop_longitude: longitude.toString()
         }));
         setIsDetectingLocation(false);
 
@@ -104,76 +101,94 @@ const MechanicForm = () => {
       const data = await response.json();
 
       if (data.display_name) {
-        setFormData(prev => ({ ...prev, shopAddress: data.display_name }));
+        setFormData(prev => ({ ...prev, shop_address: data.display_name }));
       }
     } catch (error) {
       console.error('Reverse geocoding error:', error);
     }
   };
+const validateForm = () => {
+  const requiredFields = ['first_name', 'last_name', 'email', 'mobile_number', 'shop_name', 'profile_pic', 'shop_address'];
 
-  // Validate form
-  const validateForm = () => {
-    const requiredFields = ['firstName', 'lastName', 'phone', 'email', 'shopAddress'];
-
-    for (let field of requiredFields) {
-      if (!formData[field].trim()) {
-        setError(`Please fill in the ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-        return false;
-      }
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
+  for (let field of requiredFields) {
+    if (!formData[field] || String(formData[field]).trim() === '') {
+      setError(`Please fill in the ${field.replace(/_/g, ' ')}`);
       return false;
     }
+  }
 
-    // Phone validation (basic)
-    const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(formData.phone.replace(/\D/g, ''))) {
-      setError('Please enter a valid 10-digit phone number');
-      return false;
-    }
+  if (!(formData.profile_pic instanceof File)) {
+    setError('Please upload a profile picture');
+    return false;
+  }
 
-    return true;
-  };
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) {
+    setError('Please enter a valid email address');
+    return false;
+  }
+
+  // Phone number validation
+  const phoneRegex = /^[0-9]{10}$/;
+  if (!phoneRegex.test(formData.mobile_number.replace(/\D/g, ''))) {
+    setError('Please enter a valid 10-digit phone number');
+    return false;
+  }
+
+  return true;
+};
+
+
 
   // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setSuccess('');
 
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const submissionData = {
-        ...formData,
-        phone: formData.phone.replace(/\D/g, ''), // Clean phone number
-        shopLatitude: formData.shopLatitude || null,
-        shopLongitude: formData.shopLongitude || null
-      };
+  try {
+    const submissionData = new FormData();
+    submissionData.append('first_name', formData.first_name);
+    submissionData.append('last_name', formData.last_name);
+    submissionData.append('email', formData.email);
+    submissionData.append('mobile_number', formData.mobile_number.replace(/\D/g, ''));
+    submissionData.append('shop_name', formData.shop_name);
+    submissionData.append('shop_address', formData.shop_address);
+    submissionData.append('shop_latitude', formData.shop_latitude || '');
+    submissionData.append('shop_longitude', formData.shop_longitude || '');
 
-      // Replace with your actual API endpoint
-      const response = await api.post('/mechanics/register/', submissionData);
-
-      setSuccess('Profile created successfully! Redirecting...');
-
-      // Redirect to dashboard after successful submission
-      setTimeout(() => {
-        navigate('/');
-      }, 2000);
-
-    } catch (err) {
-      console.error('Form submission error:', err);
-      setError(err?.response?.data?.error || 'Failed to create profile. Please try again.');
-    } finally {
-      setLoading(false);
+    if (formData.profile_pic instanceof File) {
+      submissionData.append('profile_pic', formData.profile_pic);
     }
-  };
+
+    await api.post('/users/SetMechanicDetail/', submissionData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    setSuccess('Profile created successfully! Redirecting...');
+    setTimeout(() => navigate('/'), 2000);
+  } catch (err) {
+    console.error('Form submission error:', err);
+    const apiErrors = err?.response?.data;
+
+    if (apiErrors) {
+      const formattedErrors = Object.entries(apiErrors)
+        .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+        .join('\n');
+      setError(formattedErrors);
+    } else {
+      setError('Failed to create profile. Please try again.');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Navigation between steps
   const nextStep = () => {
@@ -194,65 +209,91 @@ const MechanicForm = () => {
       case 1:
         return (
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="profile_pic" className="flex items-center gap-2">
+                <Image className="h-4 w-4" />
+                Profile Picture *
+              </Label>
+              <Input
+                id="profile_pic"
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleInputChange('profile_pic', e.target.files[0])}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="shop_name" className="flex items-center gap-2">
+                <Store className="h-4 w-4" />
+                Shop Name *
+              </Label>
+              <Input
+                id="shop_name"
+                type="text"
+                  placeholder="Enter your Shop name"
+
+                onChange={(e) => handleInputChange('shop_name', e.target.value)}
+                required
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
               <div className="space-y-2">
-                <Label htmlFor="firstName" className="flex items-center gap-2">
+                <Label htmlFor="first_name" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
                   First Name *
                 </Label>
                 <Input
-                  id="firstName"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  id="first_name"
+                  value={formData.first_name}
+                  onChange={(e) => handleInputChange('first_name', e.target.value)}
                   placeholder="Enter your first name"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lastName" className="flex items-center gap-2">
+                <Label htmlFor="last_name" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
                   Last Name *
                 </Label>
                 <Input
-                  id="lastName"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  id="last_name"
+                  value={formData.last_name}
+                  onChange={(e) => handleInputChange('last_name', e.target.value)}
                   placeholder="Enter your last name"
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Email Address *
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="your.email@example.com"
-                required
-                disabled={!!state?.email} // Disable if coming from login flow
-              />
-              {state?.email && (
-                <p className="text-xs text-muted-foreground">Email from your login</p>
-              )}
-            </div>
+
+<div className="space-y-2">
+  <Label htmlFor="email" className="flex items-center gap-2">
+    <Mail className="h-4 w-4" />
+    Email Address *
+  </Label>
+  <Input
+    id="email"
+    type="email"
+    value={formData.email}
+    onChange={(e) => handleInputChange('email', e.target.value)}
+    placeholder="Enter your email"
+    required
+  />
+</div>
+
 
             <div className="space-y-2">
-              <Label htmlFor="phone" className="flex items-center gap-2">
+              <Label htmlFor="mobile_number" className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
                 Phone Number *
               </Label>
               <Input
-                id="phone"
+                id="mobile_number"
                 type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
+                value={formData.mobile_number}
+                onChange={(e) => handleInputChange('mobile_number', e.target.value)}
                 placeholder="10-digit phone number"
                 required
               />
@@ -265,91 +306,115 @@ const MechanicForm = () => {
           <div className="space-y-4">
             <div className="space-y-2">
 
-<PlacePickerGujarat
-  value={{
-    address: formData.shopAddress,
-    latitude: formData.shopLatitude,
-    longitude: formData.shopLongitude
-  }}
-  onChange={({ address, latitude, longitude }) => {
-    handleInputChange('shopAddress', address);
-    handleInputChange('shopLatitude', latitude);
-    handleInputChange('shopLongitude', longitude);
-  }}
-/>
+              <PlacePickerGujarat
+                value={{
+                  address: formData.shop_address,
+                  latitude: formData.shop_latitude,
+                  longitude: formData.shop_longitude
+                }}
+                onChange={({ address, latitude, longitude }) => {
+                  handleInputChange('shop_address', address);
+                  handleInputChange('shop_latitude', latitude);
+                  handleInputChange('shop_longitude', longitude);
+                }}
+              />
 
-<Label htmlFor="shopAddress">Shop Address *</Label>
-<Textarea
-  id="shopAddress"
-  value={formData.shopAddress || ''}
-  onChange={(e) => handleInputChange('shopAddress', e.target.value)}
-  rows={3}
-  required
-/>
+              <Label htmlFor="shop_address">Shop Address *</Label>
+              <Textarea
+                id="shop_address"
+                value={formData.shop_address || ''}
+                onChange={(e) => handleInputChange('shop_address', e.target.value)}
+                rows={3}
+                required
+              />
 
-<Input
-  id="shopLatitude"
-  value={formData.shopLatitude?.toString() || ''}
-  onChange={(e) => handleInputChange('shopLatitude', e.target.value)}
-  type="number"
-  step="any"
-/>
+              <Input
+                id="shop_latitude"
+                value={formData.shop_latitude?.toString() || ''}
+                onChange={(e) => handleInputChange('shop_latitude', e.target.value)}
+                type="number"
+                step="any"
+              />
 
-<Input
-  id="shopLongitude"
-  value={formData.shopLongitude?.toString() || ''}
-  onChange={(e) => handleInputChange('shopLongitude', e.target.value)}
-  type="number"
-  step="any"
-/>
+              <Input
+                id="shop_longitude"
+                value={formData.shop_longitude?.toString() || ''}
+                onChange={(e) => handleInputChange('shop_longitude', e.target.value)}
+                type="number"
+                step="any"
+              />
 
             </div>
           </div>
         );
 
       case 3:
-        return (
-          <div className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                Please review your information before submitting. You can go back to make changes.
-              </AlertDescription>
-            </Alert>
+  return (
+    <div className="space-y-4">
+      <Alert>
+        <AlertDescription>
+          Please review your information before submitting. You can go back to make changes.
+        </AlertDescription>
+      </Alert>
 
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Name:</span>
-                <span className="font-medium">{formData.firstName} {formData.lastName}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Email:</span>
-                <span className="font-medium">{formData.email}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Phone:</span>
-                <span className="font-medium">{formData.phone}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Shop Address:</span>
-                <span className="font-medium text-right max-w-[200px] truncate">{formData.shopAddress}</span>
-              </div>
-              {(formData.shopLatitude || formData.shopLongitude) && (
-                <>
-                  <Separator />
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Coordinates:</span>
-                    <span className="font-medium">
-                      {formData.shopLatitude}, {formData.shopLongitude}
-                    </span>
-                  </div>
-                </>
-              )}
+      <div className="space-y-3">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Name:</span>
+          <span className="font-medium">{formData.first_name} {formData.last_name}</span>
+        </div>
+        <Separator />
+
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Shop Name:</span>
+          <span className="font-medium">{formData.shop_name}</span>
+        </div>
+        <Separator />
+
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Phone:</span>
+          <span className="font-medium">{formData.mobile_number}</span>
+        </div>
+        <Separator />
+
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Email:</span>
+          <span className="font-medium">{formData.email}</span>
+        </div>
+        <Separator />
+
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Shop Address:</span>
+          <span className="font-medium text-right max-w-[200px] truncate">{formData.shop_address}</span>
+        </div>
+
+        {(formData.shop_latitude || formData.shop_longitude) && (
+          <>
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Coordinates:</span>
+              <span className="font-medium">
+                {formData.shop_latitude}, {formData.shop_longitude}
+              </span>
             </div>
-          </div>
-        );
+          </>
+        )}
+      </div>
+    </div>
+  );
+{formData.profile_pic instanceof File && (
+  <>
+    <Separator />
+    <div className="flex flex-col items-start space-y-2">
+      <span className="text-muted-foreground">Profile Picture:</span>
+      <img
+        src={URL.createObjectURL(formData.profile_pic)}
+        alt="Profile preview"
+        className="w-24 h-24 object-cover rounded-md border"
+      />
+    </div>
+  </>
+)}
+
 
       default:
         return null;
