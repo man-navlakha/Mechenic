@@ -15,6 +15,13 @@ import {
 } from 'lucide-react';
 import api from '@/utils/api';
 import PlacePickerGujarat from '@/components/PlacePickerGujarat';
+import WebcamCapture from '@/components/WebcamCapture';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent
+} from '@/components/ui/tabs'; // Make sure you have Tabs component in your UI library
 
 
 const MechanicForm = () => {
@@ -45,7 +52,7 @@ const MechanicForm = () => {
 
   // Progress tracking
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   // Calculate form completion percentage
   const calculateProgress = () => {
@@ -205,225 +212,249 @@ const handleSubmit = async (e) => {
 
   // Render step content
   const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="profile_pic" className="flex items-center gap-2">
-                <Image className="h-4 w-4" />
-                Profile Picture *
-              </Label>
-              <Input
-                id="profile_pic"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleInputChange('profile_pic', e.target.files[0])}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="shop_name" className="flex items-center gap-2">
-                <Store className="h-4 w-4" />
-                Shop Name *
-              </Label>
-              <Input
-                id="shop_name"
-                type="text"
-                  placeholder="Enter your Shop name"
-
-                onChange={(e) => handleInputChange('shop_name', e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              <div className="space-y-2">
-                <Label htmlFor="first_name" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  First Name *
-                </Label>
-                <Input
-                  id="first_name"
-                  value={formData.first_name}
-                  onChange={(e) => handleInputChange('first_name', e.target.value)}
-                  placeholder="Enter your first name"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="last_name" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Last Name *
-                </Label>
-                <Input
-                  id="last_name"
-                  value={formData.last_name}
-                  onChange={(e) => handleInputChange('last_name', e.target.value)}
-                  placeholder="Enter your last name"
-                  required
-                />
-              </div>
-            </div>
-
-
-<div className="space-y-2">
-  <Label htmlFor="email" className="flex items-center gap-2">
-    <Mail className="h-4 w-4" />
-    Email Address *
+  switch (currentStep) {
+    case 1: // Personal Details
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+  <Label className="flex items-center gap-2">
+    <Image className="h-4 w-4" />
+    Profile Picture *
   </Label>
-  <Input
-    id="email"
-    type="email"
-    value={formData.email}
-    onChange={(e) => handleInputChange('email', e.target.value)}
-    placeholder="Enter your email"
-    required
-  />
+
+  <Tabs defaultValue="upload" className="w-full">
+    <TabsList>
+      <TabsTrigger value="upload">Upload</TabsTrigger>
+      <TabsTrigger value="capture">Capture</TabsTrigger>
+    </TabsList>
+
+    <TabsContent value="upload">
+      <Input
+        id="profile_pic"
+        type="file"
+        accept="image/*"
+        onChange={(e) => handleInputChange('profile_pic', e.target.files[0])}
+        required
+      />
+    </TabsContent>
+
+    <TabsContent value="capture">
+      <WebcamCapture onCapture={(file) => handleInputChange('profile_pic', file)} />
+    </TabsContent>
+  </Tabs>
+
+  {/* Preview selected/captured image */}
+  {formData.profile_pic && (
+    <img
+      src={
+        formData.profile_pic instanceof File
+          ? URL.createObjectURL(formData.profile_pic)
+          : formData.profile_pic
+      }
+      alt="Preview"
+      className="w-24 h-24 mt-2 object-cover rounded-md border"
+    />
+  )}
 </div>
 
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="mobile_number" className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                Phone Number *
+              <Label htmlFor="first_name" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                First Name *
               </Label>
               <Input
-                id="mobile_number"
-                type="tel"
-                value={formData.mobile_number}
-                onChange={(e) => handleInputChange('mobile_number', e.target.value)}
-                placeholder="10-digit phone number"
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => handleInputChange('first_name', e.target.value)}
+                placeholder="Enter your first name"
                 required
               />
             </div>
-          </div>
-        );
 
-      case 2:
-        return (
-          <div className="space-y-4">
             <div className="space-y-2">
-
-              <PlacePickerGujarat
-                value={{
-                  address: formData.shop_address,
-                  latitude: formData.shop_latitude,
-                  longitude: formData.shop_longitude
-                }}
-                onChange={({ address, latitude, longitude }) => {
-                  handleInputChange('shop_address', address);
-                  handleInputChange('shop_latitude', latitude);
-                  handleInputChange('shop_longitude', longitude);
-                }}
-              />
-
-              <Label htmlFor="shop_address">Shop Address *</Label>
-              <Textarea
-                id="shop_address"
-                value={formData.shop_address || ''}
-                onChange={(e) => handleInputChange('shop_address', e.target.value)}
-                rows={3}
+              <Label htmlFor="last_name" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Last Name *
+              </Label>
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => handleInputChange('last_name', e.target.value)}
+                placeholder="Enter your last name"
                 required
               />
-
-              <Input
-                id="shop_latitude"
-                value={formData.shop_latitude?.toString() || ''}
-                onChange={(e) => handleInputChange('shop_latitude', e.target.value)}
-                type="number"
-                step="any"
-              />
-
-              <Input
-                id="shop_longitude"
-                value={formData.shop_longitude?.toString() || ''}
-                onChange={(e) => handleInputChange('shop_longitude', e.target.value)}
-                type="number"
-                step="any"
-              />
-
             </div>
           </div>
-        );
-
-      case 3:
-  return (
-    <div className="space-y-4">
-      <Alert>
-        <AlertDescription>
-          Please review your information before submitting. You can go back to make changes.
-        </AlertDescription>
-      </Alert>
-
-      <div className="space-y-3">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Name:</span>
-          <span className="font-medium">{formData.first_name} {formData.last_name}</span>
         </div>
-        <Separator />
+      );
 
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Shop Name:</span>
-          <span className="font-medium">{formData.shop_name}</span>
+    case 2: // Shop Details
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="shop_name" className="flex items-center gap-2">
+              <Store className="h-4 w-4" />
+              Shop Name *
+            </Label>
+            <Input
+              id="shop_name"
+              type="text"
+              value={formData.shop_name}
+              onChange={(e) => handleInputChange('shop_name', e.target.value)}
+              placeholder="Enter your Shop name"
+              required
+            />
+          </div>
+
+          <PlacePickerGujarat
+            value={{
+              address: formData.shop_address,
+              latitude: formData.shop_latitude,
+              longitude: formData.shop_longitude
+            }}
+            onChange={({ address, latitude, longitude }) => {
+              handleInputChange('shop_address', address);
+              handleInputChange('shop_latitude', latitude);
+              handleInputChange('shop_longitude', longitude);
+            }}
+          />
+
+          <div className="space-y-2">
+            <Label htmlFor="shop_address">Shop Address *</Label>
+            <Textarea
+              id="shop_address"
+              value={formData.shop_address || ''}
+              onChange={(e) => handleInputChange('shop_address', e.target.value)}
+              rows={3}
+              required
+            />
+          </div>
         </div>
-        <Separator />
+      );
 
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Phone:</span>
-          <span className="font-medium">{formData.mobile_number}</span>
+    case 3: // Contact Details
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Email Address *
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mobile_number" className="flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              Phone Number *
+            </Label>
+            <Input
+              id="mobile_number"
+              type="tel"
+              value={formData.mobile_number}
+              onChange={(e) => handleInputChange('mobile_number', e.target.value)}
+              placeholder="10-digit phone number"
+              required
+            />
+          </div>
         </div>
-        <Separator />
+      );
 
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Email:</span>
-          <span className="font-medium">{formData.email}</span>
-        </div>
-        <Separator />
+    case 4: // Review
+      return (
+        <div className="space-y-4">
+          <Alert>
+            <AlertDescription>
+              Please review your information before submitting. You can go back to make changes.
+            </AlertDescription>
+          </Alert>
 
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Shop Address:</span>
-          <span className="font-medium text-right max-w-[200px] truncate">{formData.shop_address}</span>
-        </div>
-
-        {(formData.shop_latitude || formData.shop_longitude) && (
-          <>
-            <Separator />
+          <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Coordinates:</span>
-              <span className="font-medium">
-                {formData.shop_latitude}, {formData.shop_longitude}
-              </span>
+              <span className="text-muted-foreground">Name:</span>
+              <span className="font-medium">{formData.first_name} {formData.last_name}</span>
             </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-{formData.profile_pic instanceof File && (
-  <>
-    <Separator />
-    <div className="flex flex-col items-start space-y-2">
-      <span className="text-muted-foreground">Profile Picture:</span>
-      <img
-        src={URL.createObjectURL(formData.profile_pic)}
-        alt="Profile preview"
-        className="w-24 h-24 object-cover rounded-md border"
-      />
-    </div>
-  </>
-)}
+            <Separator />
 
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Shop Name:</span>
+              <span className="font-medium">{formData.shop_name}</span>
+            </div>
+            <Separator />
 
-      default:
-        return null;
-    }
-  };
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Phone:</span>
+              <span className="font-medium">{formData.mobile_number}</span>
+            </div>
+            <Separator />
+
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Email:</span>
+              <span className="font-medium">{formData.email}</span>
+            </div>
+            <Separator />
+
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Shop Address:</span>
+              <span className="font-medium text-right max-w-[200px] truncate">{formData.shop_address}</span>
+            </div>
+
+            {(formData.shop_latitude || formData.shop_longitude) && (
+              <>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Coordinates:</span>
+                  <span className="font-medium">
+                    {formData.shop_latitude}, {formData.shop_longitude}
+                  </span>
+                </div>
+              </>
+            )}
+
+            {formData.profile_pic instanceof File && (
+              <>
+                <Separator />
+                <div className="flex flex-col items-start space-y-2">
+                  <span className="text-muted-foreground">Profile Picture:</span>
+                  <img
+                    src={URL.createObjectURL(formData.profile_pic)}
+                    alt="Profile preview"
+                    className="w-24 h-24 object-cover rounded-md border"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+
+    default:
+      return null;
+  }
+};
+const getStepTitle = () => {
+  switch (currentStep) {
+    case 1: return "Personal Details";
+    case 2: return "Shop Details";
+    case 3: return "Contact Details";
+    case 4: return "Review & Submit";
+    default: return "";
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted to-accent/20 p-4">
       <Card className="w-full max-w-2xl shadow-2xl border-0 bg-background/95 backdrop-blur-sm">
+      
         <CardHeader className="text-center space-y-4 pb-6">
           <div className="flex justify-between items-center">
             <Button
@@ -450,6 +481,11 @@ const handleSubmit = async (e) => {
           {/* Progress Bar */}
           <div className="space-y-2">
             <Progress value={calculateProgress()} className="h-2" />
+            
+<CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+  {getStepTitle()}
+</CardTitle>
+
             <Badge variant="secondary" className="px-3 py-1">
               {Math.round(calculateProgress())}% Complete
             </Badge>

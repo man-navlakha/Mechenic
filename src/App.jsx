@@ -62,9 +62,9 @@ const AppContent = () => {
             </Protected>
           } />
           <Route path="/form" element={
-            <Protected>
+          
               <MechanicForm />
-            </Protected>
+           
           } />
 
 
