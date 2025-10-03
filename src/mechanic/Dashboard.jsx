@@ -1,94 +1,94 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { useEffect, useState } from "react";
+import Navbar from "../mechanic/componets/Navbar"
+import RightPanel from "./componets/RightPanel";
 
-import Navbar from './componets/Navbar';
-import RightPanel from './componets/RightPanel';
 
-// --- FIX STARTS HERE ---
-// Import image assets using ES Modules 'import' for Vite compatibility
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+const mechanicPosition = { lat: 23.0225, lng: 72.5714 }; // Ahmedabad
 
-// Fix for default Leaflet icon path issue
-// This part is crucial for making icons display correctly
-delete L.Icon.Default.prototype._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-});
-// --- FIX ENDS HERE ---
-
-// Custom Emoji Icons
-const createEmojiIcon = (emoji) => {
-  return L.divIcon({
-    html: `<span style="font-size: 2rem;">${emoji}</span>`,
-    className: 'bg-transparent border-0',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
-  });
-};
-
-const mechanicIcon = createEmojiIcon('🧑‍🔧');
-const jobIcon = createEmojiIcon('⚒️');
-
-// Sample Data
-const mechanicPosition = [23.0225, 72.5714]; // Ahmedabad coordinates
 const jobRequests = [
-  { id: 1, position: [23.03, 72.58], details: 'Flat Tire Change', payout: '₹500' },
-  { id: 2, position: [23.01, 72.56], details: 'Battery Jumpstart', payout: '₹700' },
-  { id: 3, position: [23.04, 72.57], details: 'Engine Diagnostic', payout: '₹1200' },
+  { id: 1, position: { lat: 23.03, lng: 72.58 }, details: "Flat Tire Change", payout: "₹500" },
+  { id: 2, position: { lat: 23.01, lng: 72.56 }, details: "Battery Jumpstart", payout: "₹700" },
+  { id: 3, position: { lat: 23.04, lng: 72.57 }, details: "Engine Diagnostic", payout: "₹1200" },
 ];
 
-const Dashboard = () => {
+export default function Dashboard() {
+  const [map, setMap] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
+  const [markers, setMarkers] = useState([]);
+
+  useEffect(() => {
+    // Load Mappls script dynamically
+    const script = document.createElement("script");
+    script.src =
+      "https://apis.mappls.com/advancedmaps/api/a645f44a39090467aa143b8da31f6dbd/map_sdk?layer=vector&v=3.0&callback=initMap";
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    // Global init function
+    window.initMap = () => {
+      const mapInstance = new window.mappls.Map("map", {
+        center: mechanicPosition,
+        zoom: 13,
+      });
+
+      setMap(mapInstance);
+
+      // Add mechanic marker (custom emoji)
+      new window.mappls.Marker({
+        map: mapInstance,
+        position: mechanicPosition,
+        html: `<div style="font-size:2rem;">🧑‍🔧</div>`,
+      }).bindPopup("Your current location.");
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!map) return;
+
+    // Clear existing markers
+    markers.forEach((m) => m.remove());
+    const newMarkers = [];
+
+    if (isOnline) {
+  jobRequests.forEach((job) => {
+    const marker = new window.mappls.Marker({
+      map,
+      position: job.position,
+      html: `<div style="font-size:2rem;">⚒️</div>`,
+      popupHtml: `
+        <div style="font-family: sans-serif;">
+          <h3 style="font-weight: bold; font-size: 14px;">${job.details}</h3>
+          <p>Estimated Payout: <span style="color: green; font-weight: 600;">${job.payout}</span></p>
+          <button style="margin-top:5px; padding:4px 8px; background:#3B82F6; color:white; border:none; border-radius:4px; cursor:pointer;">
+            Accept Job
+          </button>
+        </div>
+      `,
+    });
+
+    newMarkers.push(marker);
+  });
+}
+
+
+    setMarkers(newMarkers);
+  }, [isOnline, map]);
 
   return (
     <div className="relative h-screen w-screen flex flex-col overflow-hidden">
       <Navbar mechanicName="John Doe" />
 
       <div className="relative flex-grow">
-        {/* Map Background */}
-        <MapContainer center={mechanicPosition} zoom={13} className="h-full w-full z-0">
-         <TileLayer
-  url="https://apis.mappls.com/advancedmaps/v1/qmaauuemyoriejrqmevkhcvcyxktvulntdtp/tiles/{z}/{x}/{y}.png"
-  attribution='Map data &copy; <a href="https://www.mappls.com/">Mappls</a>'
-/>
+        <div id="map" className="h-full w-full z-0" />
 
-
-          {/* Mechanic's Location Marker */}
-          <Marker position={mechanicPosition} icon={mechanicIcon}>
-            <Popup>Your current location.</Popup>
-          </Marker>
-
-          {/* Available Job Requests Markers */}
-          {isOnline && jobRequests.map(job => (
-            <Marker key={job.id} position={job.position} icon={jobIcon}>
-              <Popup>
-                <div className="font-sans">
-                  <h3 className="font-bold text-md">{job.details}</h3>
-                  <p>Estimated Payout: <span className="font-semibold text-green-600">{job.payout}</span></p>
-                  <button className="mt-2 w-full bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-600">
-                    Accept Job
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
-
-
-        {/* Right Panel Overlay (now includes mobile drawer) */}
+        {/* Right Panel Overlay */}
         <RightPanel isOnline={isOnline} setIsOnline={setIsOnline} />
       </div>
-            {/* <script src="https://apis.mappls.com/advancedmaps/api/qmaauuemyoriejrqmevkhcvcyxktvulntdtp/map_sdk?v=3.0&layer=vector"></script> */}
     </div>
   );
-};
-
-export default Dashboard;
+}

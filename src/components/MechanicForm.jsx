@@ -139,11 +139,11 @@ const MechanicForm = () => {
       setError('Please enter a valid email address');
       return false;
     }
- const aadharRegex = /^\d{12}$/; // 12 digits only
-  if (!aadharRegex.test(formData.aadhar_number)) {
-    setError('Please enter a valid 12-digit Aadhar number');
-    return false;
-  }
+    const aadharRegex = /^\d{12}$/; // 12 digits only
+    if (!aadharRegex.test(formData.aadhar_number)) {
+      setError('Please enter a valid 12-digit Aadhar number');
+      return false;
+    }
 
     // Phone number validation
 
@@ -296,22 +296,22 @@ const MechanicForm = () => {
               </div>
 
               <div className="space-y-2">
-  <Label htmlFor="aadhar_number" className="flex items-center gap-2">
-    <User className="h-4 w-4" />
-    Aadhar Number *
-  </Label>
-  <Input
-    id="aadhar_number"
-    type="text"
-    inputMode="numeric"
-    pattern="\d{12}"
-    maxLength={12}
-    value={formData.aadhar_number}
-    onChange={(e) => handleInputChange('aadhar_number', e.target.value)}
-    placeholder="Enter your 12-digit Aadhar number"
-    required
-  />
-</div>
+                <Label htmlFor="aadhar_number" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Aadhar Number *
+                </Label>
+                <Input
+                  id="aadhar_number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{12}"
+                  maxLength={12}
+                  value={formData.aadhar_number}
+                  onChange={(e) => handleInputChange('aadhar_number', e.target.value)}
+                  placeholder="Enter your 12-digit Aadhar number"
+                  required
+                />
+              </div>
 
             </div>
           </div>
@@ -334,6 +334,12 @@ const MechanicForm = () => {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="shop_name" className="flex items-center gap-2">
+                 <MapPin className="h-5 w-5 text-primary" />
+                          Shop Location *
+              </Label>
+            
 
             <PlacePickerGujarat
               value={{
@@ -347,6 +353,8 @@ const MechanicForm = () => {
                 handleInputChange('shop_longitude', longitude);
               }}
             />
+            
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="shop_address">Shop Address *</Label>
@@ -414,9 +422,9 @@ const MechanicForm = () => {
               </div>
               <Separator />
               <div className="flex justify-between">
-  <span className="text-muted-foreground">Aadhar Number:</span>
-  <span className="font-medium">{formData.aadhar_number}</span>
-</div>
+                <span className="text-muted-foreground">Aadhar Number:</span>
+                <span className="font-medium">{formData.aadhar_number}</span>
+              </div>
               <Separator />
 
               <div className="flex justify-between">
