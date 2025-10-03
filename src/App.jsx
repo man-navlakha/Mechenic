@@ -9,7 +9,10 @@ import Dashboard from "./mechanic/Dashboard";
 import Login from "./components/LoginForm";
 import Logout from "./components/Logout";
 import OTP from './components/OtpPage';
+<<<<<<< HEAD
+=======
 import MechanicForm from './components/MechanicForm';
+>>>>>>> upstream/main
 
 
 
