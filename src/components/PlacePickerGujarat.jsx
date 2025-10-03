@@ -79,12 +79,12 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [locationError, setLocationError] = useState('');
-  
+
   // Initialize position with proper fallback and validation
   const getInitialPosition = () => {
     const lat = parseFloat(value.latitude);
     const lon = parseFloat(value.longitude);
-    
+
     if (!isNaN(lat) && !isNaN(lon) && lat >= 20 && lat <= 25 && lon >= 68 && lon <= 75) {
       return [lat, lon];
     }
@@ -165,15 +165,15 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
 
     const newPosition = [lat, lon];
     setPosition(newPosition);
-    
+
     let finalAddress = displayName;
     if (!finalAddress) {
       finalAddress = await reverseGeocode(lat, lon);
     }
-    
+
     setAddress(finalAddress);
     setQuery(finalAddress);
-    
+
     if (onChange) {
       onChange({
         address: finalAddress,
@@ -181,7 +181,7 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
         longitude: lon,
       });
     }
-    
+
     setResults([]);
     setLocationError('');
   };
@@ -204,7 +204,7 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
         const { latitude, longitude } = coords;
-        
+
         // Check if location is within Gujarat bounds
         if (latitude >= 20 && latitude <= 25 && longitude >= 68 && longitude <= 75) {
           await updatePosition(latitude, longitude);
@@ -218,9 +218,9 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
         setIsDetectingLocation(false);
         setLocationError('Unable to retrieve your location. Please ensure location permissions are granted.');
       },
-      { 
+      {
         timeout: 15000,
-        enableHighAccuracy: true 
+        enableHighAccuracy: true
       }
     );
   };
@@ -235,21 +235,12 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
   const safeAddress = address || 'No location selected';
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
-          Shop Location
-        </CardTitle>
-        <CardDescription>
-          Search and select your shop location in Gujarat
-        </CardDescription>
-      </CardHeader>
+    <div className="w-full">
 
       <CardContent className="space-y-4">
         {/* Search Section */}
         <div className="space-y-3">
-          <Label htmlFor="location-search">Search Location</Label>
+
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -314,18 +305,17 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
               Click on map to set location
             </Badge>
           </div>
-          
+
           <div className="h-64 w-full rounded-lg overflow-hidden border border-border">
-            <MapContainer 
-              center={safePosition} 
-              zoom={12} 
-              scrollWheelZoom={true} 
+            <MapContainer
+              center={safePosition}
+              zoom={12}
+              scrollWheelZoom={true}
               style={{ height: '100%', width: '100%' }}
               className="rounded-lg"
             >
-              <TileLayer 
+              <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
               <LocationMarker position={safePosition} setPosition={updatePosition} />
             </MapContainer>
@@ -334,27 +324,6 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
 
         <Separator />
 
-        {/* Selected Location Info */}
-        <div className="space-y-3">
-          <Label>Selected Location</Label>
-          <Card className="bg-muted/50">
-            <CardContent className="p-3">
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{safeAddress}</p>
-                    {safeAddress !== 'No location selected' && (
-                      <p className="text-xs text-muted-foreground">
-                        Lat: {safePosition[0].toFixed(6)}, Lng: {safePosition[1].toFixed(6)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Location Error */}
         {locationError && (
@@ -396,14 +365,9 @@ const PlacePickerGujarat = ({ value = {}, onChange }) => {
           </Button>
         </div>
 
-        {/* Help Text */}
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">
-            💡 Click on the map or search to set your shop location
-          </p>
-        </div>
+
       </CardContent>
-    </Card>
+    </div>
   );
 };
 
