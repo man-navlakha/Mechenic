@@ -85,7 +85,7 @@ const Dashboard = () => {
           ))}
         </MapContainer>
 
-        {/* Right Panel Overlay */}
+        {/* Right Panel Overlay (now includes mobile drawer) */}
         <RightPanel isOnline={isOnline} setIsOnline={setIsOnline} />
       </div>
     </div>

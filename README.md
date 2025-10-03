@@ -1,11 +1,12 @@
-# Mechanic Setu ✨
+# Setu Partner ✨
 
 
 
 > ## Your instant repair solution. Ride smoother, not broken down. 
-> "Mechanic Setu" is an on-demand roadside assistance platform that connects vehicle owners with nearby, verified mechanics for issues like flat tires or minor mechanical faults. It functions as a real-time marketplace, offering convenience and speed to users while providing mechanics with a new customer acquisition channel. The system consists of user and mechanic apps built with React and a Django backend.
+> "Setu Partner" is an on-demand roadside assistance platform that connects vehicle owners with nearby, verified mechanics for issues like flat tires or minor mechanical faults. It functions as a real-time marketplace, offering convenience and speed to users while providing mechanics with a new customer acquisition channel. The system consists of user and mechanic apps built with React and a Django backend.
 > 
-> **[Try Mechanic Setu Live\!](https://mechanicsetu.netlify.app/)**
+> [![Netlify Status](https://api.netlify.com/api/v1/badges/02d686a3-e570-4187-bb25-f411ad7ec6d6/deploy-status)](https://app.netlify.com/projects/setu-partner/deploys)
+> **[Try Setu Partner Live\!](https://setu-partner.netlify.app/)**
 
  
  ----

@@ -106,14 +106,14 @@ const LoginForm = () => {
             <div className="bg-primary/10 p-3 rounded-full">
               <img 
                 src="/ms.png" 
-                alt="Mechanic Setu Logo" 
+                alt="Setu Partner Logo" 
                 className="w-16 h-16 rounded-full border-2 border-primary/20"
               />
             </div>
           </div>
           <div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              MECHANIC SETU
+              Setu Partner
             </CardTitle>
             <CardDescription className="text-lg italic text-muted-foreground">
               Always at emergency
@@ -235,7 +235,7 @@ const LoginForm = () => {
 
       {/* Footer */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center text-xs text-muted-foreground">
-        <p>© 2024 Mechanic Setu. All rights reserved.</p>
+        <p>© 2024 Setu Partner. All rights reserved.</p>
       </div>
     </div>
   );
