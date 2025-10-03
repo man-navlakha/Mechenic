@@ -55,14 +55,11 @@ const Dashboard = () => {
       <div className="relative flex-grow">
         {/* Map Background */}
         <MapContainer center={mechanicPosition} zoom={13} className="h-full w-full z-0">
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://man-navlakha.netlify.app/">Man Navlakha</a> Developer of this Website'
-          />
+         <TileLayer
+  url="https://apis.mappls.com/advancedmaps/v1/qmaauuemyoriejrqmevkhcvcyxktvulntdtp/tiles/{z}/{x}/{y}.png"
+  attribution='Map data &copy; <a href="https://www.mappls.com/">Mappls</a>'
+/>
+
 
           {/* Mechanic's Location Marker */}
           <Marker position={mechanicPosition} icon={mechanicIcon}>
@@ -85,9 +82,11 @@ const Dashboard = () => {
           ))}
         </MapContainer>
 
+
         {/* Right Panel Overlay (now includes mobile drawer) */}
         <RightPanel isOnline={isOnline} setIsOnline={setIsOnline} />
       </div>
+            {/* <script src="https://apis.mappls.com/advancedmaps/api/qmaauuemyoriejrqmevkhcvcyxktvulntdtp/map_sdk?v=3.0&layer=vector"></script> */}
     </div>
   );
 };

@@ -9,10 +9,7 @@ import Dashboard from "./mechanic/Dashboard";
 import Login from "./components/LoginForm";
 import Logout from "./components/Logout";
 import OTP from './components/OtpPage';
-<<<<<<< HEAD
-=======
 import MechanicForm from './components/MechanicForm';
->>>>>>> upstream/main
 
 
 
@@ -21,6 +18,7 @@ import Protected from './ProtectedRoute'
 // Import the lock screen functionality
 import { LockProvider, useLock } from './context/LockContext';
 import LockScreen from './mechanic/componets/LockScreen';
+import KYCForm from './components/KYCForm';
 
 
 
@@ -69,6 +67,13 @@ const AppContent = () => {
               <MechanicForm />
            
           } />
+          <Route path="/KYC" element={
+          
+              <KYCForm />
+           
+          } />
+
+
 
 
 
