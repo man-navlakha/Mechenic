@@ -34,10 +34,10 @@ export default function MechanicVerification() {
   }, []);
 
   // ✅ Verify API
-  const verifyMechanic = async (id) => {
+  const verifyMechanic = async (mechanic_id) => {
     setErrorMsg(null);
     try {
-      await api.post("/VerifyMechanic", { id });
+      await api.post("users/VerifyMechanic/", { mechanic_id });
       fetchMechanicDetails();
     } catch (error) {
       const msg = error.response?.data?.detail || "Failed to verify mechanic.";
@@ -46,10 +46,10 @@ export default function MechanicVerification() {
   };
 
   // ✅ Reject API
-  const rejectMechanic = async (id) => {
+  const rejectMechanic = async (mechanic_id) => {
     setErrorMsg(null);
     try {
-      await api.post("/RejectMechanic", { id });
+      await api.post("users/RejectMechanic/", { mechanic_id });
       fetchMechanicDetails();
     } catch (error) {
       const msg = error.response?.data?.detail || "Failed to reject mechanic.";
