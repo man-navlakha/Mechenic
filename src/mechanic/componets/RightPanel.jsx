@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  Car, Route, DollarSign, Clock, Phone, MapPin, User, Wrench 
+import {
+  Car, Route, DollarSign, Clock, Phone, MapPin, User, Wrench
 } from 'lucide-react';
 
 // Shadcn/ui components
@@ -13,6 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
+
+import StatusSwitch from './StatusSwitch';
 
 // New Job Request Component
 const NewJobRequest = ({ onReject, onAccept }) => {
@@ -94,14 +96,14 @@ const NewJobRequest = ({ onReject, onAccept }) => {
 
       <div className="p-4 border-t bg-muted/20">
         <div className="grid grid-cols-2 gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={onReject}
             className="border-red-200 text-red-600 hover:bg-red-50"
           >
             Reject
           </Button>
-          <Button 
+          <Button
             onClick={onAccept}
             className="bg-green-600 hover:bg-green-700"
           >
@@ -202,13 +204,13 @@ const AvailableRequests = ({ isOnline }) => {
 };
 
 // Fixed Responsive Panel Component
-const ResponsivePanel = ({ isOnline, setIsOnline }) => {
+const ResponsivePanel = ({ isOnline, setIsOnline, isVerified }) => {
   const [newRequest, setNewRequest] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [isMobile, setIsMobile] = useState(false);
   const [drawerPosition, setDrawerPosition] = useState('down');
   const [isDragging, setIsDragging] = useState(false);
-  
+
   const drawerRef = useRef(null);
   const startYRef = useRef(0);
   const startPositionRef = useRef(0);
@@ -240,10 +242,10 @@ const ResponsivePanel = ({ isOnline, setIsOnline }) => {
 
   const handleDragMove = (e) => {
     if (!isDragging) return;
-    
+
     const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
     const deltaY = startYRef.current - clientY;
-    
+
     // Simple position switching
     if (deltaY > 100) {
       // Dragging up
@@ -300,7 +302,7 @@ const ResponsivePanel = ({ isOnline, setIsOnline }) => {
     if (newRequest) {
       return (
         <div className="h-full">
-          <NewJobRequest 
+          <NewJobRequest
             onReject={() => setNewRequest(false)}
             onAccept={handleAcceptJob}
           />
@@ -316,14 +318,14 @@ const ResponsivePanel = ({ isOnline, setIsOnline }) => {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl">Mechanic Dashboard</CardTitle>
                 <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={isOnline}
-                    onCheckedChange={setIsOnline}
-                    id="online-status"
+
+                  <StatusSwitch
+                    initialStatus={isOnline ? 'ONLINE' : 'OFFLINE'}
+                    isVerified={isVerified}
                   />
-                  <Label htmlFor="online-status" className="text-sm">
-                    {isOnline ? 'Online' : 'Offline'}
-                  </Label>
+
+
+
                 </div>
               </div>
               <CardDescription>
@@ -360,9 +362,9 @@ const ResponsivePanel = ({ isOnline, setIsOnline }) => {
                     </CardContent>
                   </Card>
 
-                  <Button 
+                  <Button
                     onClick={() => setNewRequest(true)}
-                    variant="outline" 
+                    variant="outline"
                     className="w-full border-dashed"
                     disabled={!isOnline}
                   >
@@ -413,7 +415,7 @@ const ResponsivePanel = ({ isOnline, setIsOnline }) => {
           </Label>
         </div>
       </div>
-      
+
       <div className="flex-1 p-4 pt-0">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
@@ -439,7 +441,7 @@ const ResponsivePanel = ({ isOnline, setIsOnline }) => {
     if (newRequest) {
       return (
         <div className="fixed inset-4 z-50">
-          <NewJobRequest 
+          <NewJobRequest
             onReject={() => setNewRequest(false)}
             onAccept={handleAcceptJob}
           />
@@ -450,7 +452,7 @@ const ResponsivePanel = ({ isOnline, setIsOnline }) => {
     return (
       <>
         {(drawerPosition === 'middle' || drawerPosition === 'up') && (
-          <div 
+          <div
             className="fixed inset-0 bg-black/20 z-40"
             onClick={() => setDrawerPosition('down')}
           />

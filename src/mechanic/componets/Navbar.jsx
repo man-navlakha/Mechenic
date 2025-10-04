@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Wrench, User, Settings, Lock, LogOut, ChevronDown, Menu } from 'lucide-react';
+import { Wrench, User, Settings, Lock, LogOut, ChevronDown, Menu, BadgeCheck  } from 'lucide-react';
 import { useLock } from '../../context/LockContext';
 
 // Shadcn/ui components
 import { Button } from '@/components/ui/button';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -13,16 +13,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
+import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from '@/components/ui/sheet';
+
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-const Navbar = ({ mechanicName = "John Doe" }) => {
+const Navbar = ({ mechanicName = "Man Navlakha" , isOnline, isVerified ,setIsOnline }) => {
   const { lockScreen } = useLock();
   const navigate = useNavigate();
 
@@ -45,8 +46,8 @@ const Navbar = ({ mechanicName = "John Doe" }) => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
-                <MobileMenu 
-                  mechanicName={mechanicName} 
+                <MobileMenu
+                  mechanicName={mechanicName}
                   lockScreen={lockScreen}
                   handleLogout={handleLogout}
                 />
@@ -54,7 +55,7 @@ const Navbar = ({ mechanicName = "John Doe" }) => {
             </Sheet>
 
             <Link to="/" className="flex items-center space-x-3">
-             
+
               <div>
                 <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                   Mechanic
@@ -91,9 +92,15 @@ const Navbar = ({ mechanicName = "John Doe" }) => {
           <div className="flex items-center space-x-4">
             {/* Online Status Indicator */}
             <div className="hidden sm:flex items-center space-x-2 text-sm text-muted-foreground">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Online</span>
+              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span>{isOnline ? 'Online' : 'Offline'}</span>
             </div>
+
+            {isVerified && (
+  <Badge variant="success" className="text-xs text-green-500 bg-green-300/30 ml-1"><BadgeCheck className="h-4 w-4 text-green-500"  /> Verified</Badge>
+)}
+
+
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -106,38 +113,35 @@ const Navbar = ({ mechanicName = "John Doe" }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{mechanicName}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      Professional Mechanic
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
+               <DropdownMenuLabel className="font-normal">
+  <div className="flex flex-col space-y-1">
+    <div className="flex items-center gap-1">
+      <p className="text-sm font-medium leading-none">{mechanicName}</p>
+      {isVerified && <BadgeCheck className="h-4 w-4 text-green-500" />}
+    </div>
+    <p className="text-xs leading-none text-muted-foreground">
+      Professional Mechanic
+    </p>
+  </div>
+</DropdownMenuLabel>
+
                 <DropdownMenuSeparator />
-                
+
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-                
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-                
+
                 <DropdownMenuItem onClick={lockScreen}>
                   <Lock className="mr-2 h-4 w-4" />
                   <span>Lock Screen</span>
                 </DropdownMenuItem>
-                
+
                 <DropdownMenuSeparator />
-                
-                <DropdownMenuItem 
+
+                <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-destructive focus:text-destructive"
                 >
@@ -218,8 +222,8 @@ const MobileMenu = ({ mechanicName, lockScreen, handleLogout }) => {
 
       {/* Footer */}
       <div className="p-4 border-t">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="w-full text-destructive border-destructive/20 hover:bg-destructive/10"
           onClick={handleLogout}
         >
