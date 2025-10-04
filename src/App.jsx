@@ -18,7 +18,7 @@ import Protected from './ProtectedRoute'
 // Import the lock screen functionality
 import { LockProvider, useLock } from './context/LockContext';
 import LockScreen from './mechanic/componets/LockScreen';
-import KYCForm from './components/KYCForm';
+import MechanicVerification from './components/MechanicVerification';
 
 
 
@@ -67,9 +67,9 @@ const AppContent = () => {
               <MechanicForm />
            
           } />
-          <Route path="/KYC" element={
+          <Route path="/kyc" element={
           
-              <KYCForm />
+              <MechanicVerification />
            
           } />
 
