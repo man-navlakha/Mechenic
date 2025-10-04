@@ -41,7 +41,7 @@ const MechanicForm = () => {
     email: '',
     mobile_number: '',
     profile_pic: '',
-    aadhar_number: '',
+    adhar_card: '',
     shop_name: '',
     shop_address: '',
     shop_latitude: '',
@@ -119,7 +119,7 @@ const MechanicForm = () => {
     }
   };
   const validateForm = () => {
-    const requiredFields = ['first_name', 'last_name', 'email', 'aadhar_number', 'mobile_number', 'shop_name', 'profile_pic', 'shop_address'];
+    const requiredFields = ['first_name', 'last_name', 'email', 'adhar_card', 'mobile_number', 'shop_name', 'profile_pic', 'shop_address'];
 
     for (let field of requiredFields) {
       if (!formData[field] || String(formData[field]).trim() === '') {
@@ -140,7 +140,7 @@ const MechanicForm = () => {
       return false;
     }
     const aadharRegex = /^\d{12}$/; // 12 digits only
-    if (!aadharRegex.test(formData.aadhar_number)) {
+    if (!aadharRegex.test(formData.adhar_card)) {
       setError('Please enter a valid 12-digit Aadhar number');
       return false;
     }
@@ -164,22 +164,17 @@ const MechanicForm = () => {
 
     try {
       const submissionData = new FormData();
-      submissionData.append('first_name', formData.first_name);
-      submissionData.append('last_name', formData.last_name);
-      submissionData.append('aadhar_number', formData.aadhar_number);
-      submissionData.append('email', formData.email);
-      submissionData.append('mobile_number', formData.mobile_number);
-      submissionData.append('shop_name', formData.shop_name);
-      submissionData.append('shop_address', formData.shop_address);
-      submissionData.append('shop_latitude', formData.shop_latitude || '');
-      submissionData.append('shop_longitude', formData.shop_longitude || '');
+submissionData.append('first_name', formData.first_name);
+submissionData.append('last_name', formData.last_name);
+submissionData.append('adhar_card', formData.adhar_card);
+submissionData.append('email', formData.email);
+submissionData.append('mobile_number', formData.mobile_number);
+submissionData.append('shop_name', formData.shop_name);
+submissionData.append('shop_address', formData.shop_address);
+submissionData.append('shop_latitude', formData.shop_latitude || '');
+submissionData.append('shop_longitude', formData.shop_longitude || '');
+submissionData.append('profile_pic', formData.profile_pic); // file or captured blob
 
-      if (formData.profile_pic instanceof File) {
-        submissionData.append('profile_pic', formData.profile_pic);
-      } else {
-        setError('Profile picture must be a valid file.');
-        return;
-      }
 
       await api.post('/users/SetMechanicDetail/', submissionData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -296,18 +291,18 @@ const MechanicForm = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="aadhar_number" className="flex items-center gap-2">
+                <Label htmlFor="adhar_card" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
                   Aadhar Number *
                 </Label>
                 <Input
-                  id="aadhar_number"
+                  id="adhar_card"
                   type="text"
                   inputMode="numeric"
                   pattern="\d{12}"
                   maxLength={12}
-                  value={formData.aadhar_number}
-                  onChange={(e) => handleInputChange('aadhar_number', e.target.value)}
+                  value={formData.adhar_card}
+                  onChange={(e) => handleInputChange('adhar_card', e.target.value)}
                   placeholder="Enter your 12-digit Aadhar number"
                   required
                 />
@@ -423,7 +418,7 @@ const MechanicForm = () => {
               <Separator />
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Aadhar Number:</span>
-                <span className="font-medium">{formData.aadhar_number}</span>
+                <span className="font-medium">{formData.adhar_card}</span>
               </div>
               <Separator />
 
