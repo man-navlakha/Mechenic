@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [mapStatus, setMapStatus] = useState("loading");
   const [locationStatus, setLocationStatus] = useState("getting");
   const [lastLocationUpdate, setLastLocationUpdate] = useState(null);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
 
   // Track initialization state
   const initStateRef = useRef({
@@ -39,66 +40,102 @@ export default function Dashboard() {
     fetchBasicNeeds();
   }, []);
 
-  // Get mechanic's location periodically (every 3-4 minutes)
+  // Check location permissions and capabilities
   useEffect(() => {
+    const checkLocationSupport = () => {
+      if (!navigator.geolocation) {
+        console.error("Geolocation is not supported by this browser");
+        setLocationStatus("unsupported");
+        setShowLocationPrompt(true);
+        setMechanicPosition({ lat: 23.0225, lng: 72.5714 });
+        return false;
+      }
+      return true;
+    };
+
+    if (checkLocationSupport()) {
+      // Try to get location immediately
+      getLocation();
+    }
+  }, []);
+
+  const getLocation = () => {
     if (!navigator.geolocation) {
-      console.error("Geolocation is not supported by this browser");
-      setLocationStatus("error");
-      setMechanicPosition({ lat: 23.0225, lng: 72.5714 });
+      setLocationStatus("unsupported");
+      setShowLocationPrompt(true);
       return;
     }
 
-    const getLocation = () => {
-      setLocationStatus("getting");
+    setLocationStatus("getting");
+    setShowLocationPrompt(false);
 
-      const successCallback = (position) => {
-        const newPosition = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        console.log("Location updated:", newPosition, new Date().toLocaleTimeString());
-        setMechanicPosition(newPosition);
-        setLocationStatus("success");
-        setLastLocationUpdate(new Date());
-        
-        // Update mechanic marker if map is already initialized
-        updateMechanicMarker(newPosition);
+    const successCallback = (position) => {
+      const newPosition = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
       };
-
-      const errorCallback = (error) => {
-        console.error("Geolocation error:", error.message);
-        setLocationStatus("error");
-        // Fallback to default position only if we don't have any position
-        if (!mechanicPosition) {
-          setMechanicPosition({ lat: 23.0225, lng: 72.5714 });
-        }
-      };
-
-      const options = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes - accept cached location if recent
-      };
-
-      navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+      console.log("Location updated:", newPosition, new Date().toLocaleTimeString());
+      setMechanicPosition(newPosition);
+      setLocationStatus("success");
+      setLastLocationUpdate(new Date());
+      setShowLocationPrompt(false);
+      
+      // Update mechanic marker if map is already initialized
+      updateMechanicMarker(newPosition);
     };
 
-    // Get initial location immediately
-    getLocation();
+    const errorCallback = (error) => {
+      console.error("Geolocation error:", error.message);
+      
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          setLocationStatus("permission_denied");
+          setShowLocationPrompt(true);
+          break;
+        case error.POSITION_UNAVAILABLE:
+          setLocationStatus("unavailable");
+          setShowLocationPrompt(true);
+          break;
+        case error.TIMEOUT:
+          setLocationStatus("timeout");
+          setShowLocationPrompt(true);
+          break;
+        default:
+          setLocationStatus("error");
+          setShowLocationPrompt(true);
+          break;
+      }
+      
+      // Fallback to default position only if we don't have any position
+      if (!mechanicPosition) {
+        setMechanicPosition({ lat: 23.0225, lng: 72.5714 });
+      }
+    };
 
-    // Set up interval for periodic updates (3-4 minutes)
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 15000, // Increased timeout for mobile devices
+      maximumAge: 300000 // 5 minutes - accept cached location if recent
+    };
+
+    navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+  };
+
+  // Set up periodic location updates once we have initial permission
+  useEffect(() => {
+    if (locationStatus !== "success") return;
+
     const intervalTime = Math.random() * 60000 + 180000; // 3-4 minutes in milliseconds
     const intervalId = setInterval(getLocation, intervalTime);
 
     console.log(`Location update interval set to ${Math.round(intervalTime / 1000)} seconds`);
 
-    // Cleanup interval on unmount
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
       }
     };
-  }, []);
+  }, [locationStatus]);
 
   // Update mechanic marker when position changes
   const updateMechanicMarker = (newPosition) => {
@@ -170,34 +207,45 @@ export default function Dashboard() {
 
   // Manual location refresh function
   const refreshLocation = () => {
-    if (!navigator.geolocation) return;
+    getLocation();
+  };
+
+  // Function to handle location enable button click
+  const handleEnableLocation = () => {
+    console.log("User clicked enable location button");
+    getLocation();
+  };
+
+  // Get user-friendly location error message
+  const getLocationErrorMessage = () => {
+    switch (locationStatus) {
+      case "permission_denied":
+        return "Location access was denied. Please enable location permissions in your browser settings.";
+      case "unavailable":
+        return "Location information is unavailable. Please check your device settings.";
+      case "timeout":
+        return "Location request timed out. Please try again.";
+      case "unsupported":
+        return "Your browser doesn't support location services.";
+      case "error":
+        return "Failed to get your location. Please try again.";
+      default:
+        return "Unable to access your location. Please enable location services.";
+    }
+  };
+
+  // Get device-specific instructions
+  const getDeviceInstructions = () => {
+    const isiPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
     
-    setLocationStatus("getting");
-    
-    const successCallback = (position) => {
-      const newPosition = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      };
-      console.log("Manual location refresh:", newPosition);
-      setMechanicPosition(newPosition);
-      setLocationStatus("success");
-      setLastLocationUpdate(new Date());
-      updateMechanicMarker(newPosition);
-    };
-
-    const errorCallback = (error) => {
-      console.error("Manual location refresh error:", error.message);
-      setLocationStatus("error");
-    };
-
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    };
-
-    navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+    if (isiPhone) {
+      return "On iPhone: Go to Settings > Privacy & Security > Location Services > Your Browser, and select 'While Using the App'";
+    } else if (isAndroid) {
+      return "On Android: Go to Settings > Location > App permissions > Your Browser, and enable location access";
+    } else {
+      return "Check your browser settings and allow location access for this website";
+    }
   };
 
   // Main map initialization effect - depends on mechanicPosition
@@ -464,25 +512,58 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Location status indicator */}
-        {locationStatus === "error" && (
-          <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-            Using default location. Enable location services for better accuracy.
+        {/* Location Enable Prompt */}
+        {showLocationPrompt && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-yellow-100 border border-yellow-400 text-yellow-800 px-6 py-4 rounded-lg shadow-lg max-w-md z-10">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-yellow-800 mb-2">
+                  Location Access Required
+                </h3>
+                <p className="text-yellow-700 text-sm mb-3">
+                  {getLocationErrorMessage()}
+                </p>
+                <p className="text-yellow-600 text-xs mb-4">
+                  {getDeviceInstructions()}
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleEnableLocation}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Enable Location
+                  </button>
+                  <button
+                    onClick={() => setShowLocationPrompt(false)}
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Use Default Location
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Location update info */}
-        {/* {lastLocationUpdate && (
+        {lastLocationUpdate && locationStatus === "success" && (
           <div className="absolute top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded text-sm">
-            Location updated: {lastLocationUpdate.toLocaleTimeString()}
-            <button 
-              onClick={refreshLocation}
-              className="ml-2 bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center space-x-2">
+              <span>📍 Updated: {lastLocationUpdate.toLocaleTimeString()}</span>
+              <button 
+                onClick={refreshLocation}
+                className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
-        )} */}
+        )}
 
         <RightPanel
           shopName={basicNeeds?.shop_name}
