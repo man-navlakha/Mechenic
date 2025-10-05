@@ -18,7 +18,7 @@ import Protected from './ProtectedRoute'
 // Import the lock screen functionality
 import { LockProvider, useLock } from './context/LockContext';
 import LockScreen from './mechanic/componets/LockScreen';
-import MechanicVerification from './components/MechanicVerification';
+import MechanicVerification from './mechanic/componets/admin/MechanicVerification';
 
 
 
