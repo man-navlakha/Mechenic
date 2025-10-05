@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Car, Route, DollarSign, Clock, Phone, MapPin, User, Wrench
+  Car, Route, DollarSign, Clock, MapPin, User, Wrench
 } from 'lucide-react';
 
 // Shadcn/ui components
@@ -204,7 +204,7 @@ const AvailableRequests = ({ isOnline }) => {
 };
 
 // Fixed Responsive Panel Component
-const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
+const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, statusFromAPI, setStatusFromAPI }) => {
   const [newRequest, setNewRequest] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [isMobile, setIsMobile] = useState(false);
@@ -215,7 +215,7 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
   const startYRef = useRef(0);
   const startPositionRef = useRef(0);
 
-  // Check screen size - FIXED
+  // Check screen size
   useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -231,7 +231,7 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
     setNewRequest(false);
   };
 
-  // Simple drag handlers - FIXED
+  // Drag handlers
   const handleDragStart = (e) => {
     setIsDragging(true);
     const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
@@ -246,13 +246,10 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
     const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
     const deltaY = startYRef.current - clientY;
 
-    // Simple position switching
     if (deltaY > 100) {
-      // Dragging up
       if (startPositionRef.current === 'down') setDrawerPosition('middle');
       else if (startPositionRef.current === 'middle') setDrawerPosition('up');
     } else if (deltaY < -100) {
-      // Dragging down
       if (startPositionRef.current === 'up') setDrawerPosition('middle');
       else if (startPositionRef.current === 'middle') setDrawerPosition('down');
     }
@@ -262,7 +259,7 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
     setIsDragging(false);
   };
 
-  // Event listeners - FIXED
+  // Event listeners
   useEffect(() => {
     if (!isDragging) return;
 
@@ -284,7 +281,7 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
     };
   }, [isDragging]);
 
-  // Position styles - FIXED
+  // Position styles
   const getDrawerStyles = () => {
     switch (drawerPosition) {
       case 'up':
@@ -297,7 +294,7 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
     }
   };
 
-  // Main content - FIXED scroll issues
+  // Main content
   const renderPanelContent = (isCompact = false) => {
     if (newRequest) {
       return (
@@ -316,17 +313,13 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
           <>
             <CardHeader className="pb-3 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">  {shopName && shopName} </CardTitle>
-                <div className="flex items-center space-x-2">
-
-                  <StatusSwitch
-                    initialStatus={isOnline ? 'ONLINE' : 'OFFLINE'}
-                    isVerified={isVerified}
-                  />
-
-
-
-                </div>
+                <CardTitle className="text-xl">{shopName || "Loading..."}</CardTitle>
+                <StatusSwitch
+                  statusFromAPI={statusFromAPI}
+                  setStatusFromAPI={setStatusFromAPI}
+                  setIsOnline={setIsOnline}
+                  isVerified={isVerified}
+                />
               </div>
               <CardDescription>
                 {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
@@ -398,22 +391,17 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-4 pb-2">
         <div>
-          <CardTitle className="text-lg">  {shopName && shopName} </CardTitle>
+          <CardTitle className="text-lg">{shopName || "Loading..."}</CardTitle>
           <CardDescription className="text-xs">
             {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
           </CardDescription>
         </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={isOnline}
-            onCheckedChange={setIsOnline}
-            id="online-status"
-            size="sm"
-          />
-          <Label htmlFor="online-status" className="text-xs">
-            {isOnline ? 'Online' : 'Offline'}
-          </Label>
-        </div>
+        <StatusSwitch
+          statusFromAPI={statusFromAPI}
+          setStatusFromAPI={setStatusFromAPI}
+          setIsOnline={setIsOnline}
+          isVerified={isVerified}
+        />
       </div>
 
       <div className="flex-1 p-4 pt-0">
@@ -436,7 +424,7 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
     </div>
   );
 
-  // Mobile drawer - FIXED positioning
+  // Mobile drawer
   if (isMobile) {
     if (newRequest) {
       return (
@@ -483,7 +471,7 @@ const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
     );
   }
 
-  // Desktop panel - FIXED scroll
+  // Desktop panel
   return (
     <div className="absolute top-4 right-4 w-80 h-[calc(100vh-8rem)] z-10">
       <Card className="h-full shadow-xl border-0 flex flex-col">

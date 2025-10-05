@@ -70,7 +70,7 @@ export default function Dashboard() {
         new window.mappls.Marker({
           map: mapInstance,
           position: mechanicPosition,
-          html: `<div style="font-size:2rem;">🧑‍🔧</div>`,
+          html: `<div style="font-size:2rem;">📍</div>`,
           popupHtml: "<b>Your Location</b>",
         });
       } catch (error) {
