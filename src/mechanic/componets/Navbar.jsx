@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-const Navbar = ({ mechanicName = "Man Navlakha" , isOnline, isVerified ,setIsOnline }) => {
+const Navbar = ({ mechanicName = "Man Navlakha" ,shopName, isOnline, isVerified ,setIsOnline }) => {
   const { lockScreen } = useLock();
   const navigate = useNavigate();
 
@@ -120,7 +120,7 @@ const Navbar = ({ mechanicName = "Man Navlakha" , isOnline, isVerified ,setIsOnl
       {isVerified && <BadgeCheck className="h-4 w-4 text-green-500" />}
     </div>
     <p className="text-xs leading-none text-muted-foreground">
-      Professional Mechanic
+      {shopName && shopName} 
     </p>
   </div>
 </DropdownMenuLabel>

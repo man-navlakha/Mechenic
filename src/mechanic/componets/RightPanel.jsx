@@ -204,7 +204,7 @@ const AvailableRequests = ({ isOnline }) => {
 };
 
 // Fixed Responsive Panel Component
-const RightPanel = ({ isOnline, setIsOnline, isVerified }) => {
+const RightPanel = ({  shopName, isOnline, setIsOnline, isVerified }) => {
   const [newRequest, setNewRequest] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [isMobile, setIsMobile] = useState(false);
@@ -316,7 +316,7 @@ const RightPanel = ({ isOnline, setIsOnline, isVerified }) => {
           <>
             <CardHeader className="pb-3 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">Mechanic Dashboard</CardTitle>
+                <CardTitle className="text-xl">  {shopName && shopName} </CardTitle>
                 <div className="flex items-center space-x-2">
 
                   <StatusSwitch
@@ -398,7 +398,7 @@ const RightPanel = ({ isOnline, setIsOnline, isVerified }) => {
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-4 pb-2">
         <div>
-          <CardTitle className="text-lg">Mechanic Dashboard</CardTitle>
+          <CardTitle className="text-lg">  {shopName && shopName} </CardTitle>
           <CardDescription className="text-xs">
             {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
           </CardDescription>

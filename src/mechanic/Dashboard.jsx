@@ -14,15 +14,15 @@ export default function Dashboard() {
   const [isVerified, setIsVerified] = useState(false);
   const [markers, setMarkers] = useState([]);
   const [basicNeeds, setBasicNeeds] = useState(null)
-  
-useEffect(() => {
+  useEffect(() => {
   return () => {
-    if (mapRef.current && typeof mapRef.current.destroy === "function") {
-      mapRef.current.destroy();
+    if (mapRef.current && typeof mapRef.current.remove === "function") {
+      mapRef.current.remove();
       mapRef.current = null;
     }
   };
 }, []);
+
 
   // Fetch basic_needs (ignore error handling for now)
   useEffect(() => {
@@ -57,26 +57,12 @@ useEffect(() => {
   }, []);
 
   // Load Mappls SDK
- useEffect(() => {
-    if (window.mappls && !mapRef.current) {
-      window.initMap(); // SDK already loaded, init directly
-      return;
-    }
-
-    // if already injected, skip
-    if (document.getElementById("mappls-sdk")) return;
-
-    const script = document.createElement("script");
-    script.id = "mappls-sdk";
-    script.src =
-      "https://apis.mappls.com/advancedmaps/api/a645f44a39090467aa143b8da31f6dbd/map_sdk?layer=vector&v=3.0&callback=initMap";
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    // define callback before script loads
-   window.initMap = () => {
+// Initialize Mappls map only once
+useEffect(() => {
   if (mapRef.current) return; // already initialized
+
+  if (!window.mappls) return; // SDK not loaded yet
+
   const container = document.getElementById("map");
   if (!container) return;
 
@@ -86,26 +72,21 @@ useEffect(() => {
   });
 
   mapRef.current = mapInstance;
-  setMap(mapInstance); // <-- this is the missing piece
+  setMap(mapInstance);
 
-  // mechanic marker
-  new window.mappls.Marker({
+  // Add mechanic marker
+  const mechMarker = new window.mappls.Marker({
     map: mapInstance,
     position: mechanicPosition,
     html: `<div style="font-size:2rem;">🧑‍🔧</div>`,
     popupHtml: "<b>Your Location</b>",
   });
-};
 
-
-    return () => {
-      // ✅ Cleanup map instance on unmount
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [mechanicPosition]);
+  return () => {
+    mapRef.current?.remove();
+    mapRef.current = null;
+  };
+}, []);
 
 
 
@@ -156,11 +137,12 @@ useEffect(() => {
         isOnline={isOnline}
         setIsOnline={setIsOnline}
         isVerified={isVerified}
-      />
+        />
 
       <div className="relative flex-grow">
         <div id="map" className="h-full w-full z-0" />
         <RightPanel
+        shopName={basicNeeds?.shop_name}
           isOnline={isOnline}
           setIsOnline={setIsOnline}
           isVerified={isVerified}
