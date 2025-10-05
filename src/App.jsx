@@ -19,6 +19,7 @@ import Protected from './ProtectedRoute'
 import { LockProvider, useLock } from './context/LockContext';
 import LockScreen from './mechanic/componets/LockScreen';
 import MechanicVerification from './mechanic/componets/admin/MechanicVerification';
+import LegalPages from './mechanic/page/LegalPages';
 
 
 
@@ -48,7 +49,7 @@ const AppContent = () => {
 
   return (
     <>
-     
+
       {isLocked && <LockScreen />}
 
       <div className="App transition-all duration-500 ease-in-out bg-white">
@@ -59,23 +60,36 @@ const AppContent = () => {
           {/* Main Page */}
           <Route path="/" element={
             <Protected>
+
               <Dashboard />
             </Protected>
+
           } />
           <Route path="/form" element={
-          
+            <Protected>
               <MechanicForm />
-           
+            </Protected>
+
           } />
+
+
+          {/* KYC FOR ADMIN */}
           <Route path="/kyc" element={
-          
+            <Protected>
+
               <MechanicVerification />
-           
+            </Protected>
+
           } />
 
 
 
+          {/* Legal  */}
+          <Route path="/legal" element={
 
+            <LegalPages />
+
+          } />
 
 
           {/* Auth */}
@@ -89,7 +103,7 @@ const AppContent = () => {
             <Logout />
           } />
 
-          
+
           {/* Mechanic */}
           <Route path="/Dashboard" element={
             <Protected>

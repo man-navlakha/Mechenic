@@ -1,62 +1,108 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Navbar from "../mechanic/componets/Navbar";
 import RightPanel from "./componets/RightPanel";
 import api from "@/utils/api";
 
-const mechanicPosition = { lat: 23.0225, lng: 72.5714 }; // Ahmedabad
-
 export default function Dashboard() {
+   const mapRef = useRef(null); // store map instance
+  const [mechanicPosition, setMechanicPosition] = useState({
+    lat: 23.0225,
+    lng: 72.5714, // default Ahmedabad
+  });
   const [map, setMap] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [markers, setMarkers] = useState([]);
+  const [basicNeeds, setBasicNeeds] = useState(null)
 
-  // Fetch mechanic status & verification
+  // Fetch basic_needs (ignore error handling for now)
   useEffect(() => {
     const fetchBasicNeeds = async () => {
       try {
         const res = await api.get("/jobs/GetBasicNeeds/");
-        const { status, is_verified } = res.data.basic_needs || {};
-        setIsOnline(status === "ONLINE" && is_verified); // online only if verified
-        setIsVerified(!!is_verified);
+        const data = res.data.basic_needs || {};
+        setBasicNeeds(data);
+        setIsOnline(data.status === "ONLINE" && data.is_verified);
+        setIsVerified(!!data.is_verified);
       } catch (error) {
-        console.error("Failed to fetch basic needs:", error);
-        setIsOnline(false);
-        setIsVerified(false);
+        console.warn("Failed to fetch basic needs:", error);
       }
     };
 
     fetchBasicNeeds();
   }, []);
 
-  // Load Mappls script
+  // Get mechanic location
   useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setMechanicPosition({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => console.warn("Geolocation error:", error.message)
+      );
+    }
+  }, []);
+
+  // Load Mappls SDK
+ useEffect(() => {
+    if (window.mappls && !mapRef.current) {
+      window.initMap(); // SDK already loaded, init directly
+      return;
+    }
+
+    // if already injected, skip
+    if (document.getElementById("mappls-sdk")) return;
+
     const script = document.createElement("script");
+    script.id = "mappls-sdk";
     script.src =
       "https://apis.mappls.com/advancedmaps/api/a645f44a39090467aa143b8da31f6dbd/map_sdk?layer=vector&v=3.0&callback=initMap";
     script.async = true;
     script.defer = true;
     document.body.appendChild(script);
 
-    window.initMap = () => {
-      const mapInstance = new window.mappls.Map("map", {
-        center: mechanicPosition,
-        zoom: 13,
-      });
-      setMap(mapInstance);
+    // define callback before script loads
+   window.initMap = () => {
+  if (mapRef.current) return; // already initialized
+  const container = document.getElementById("map");
+  if (!container) return;
 
-      // Mechanic marker
-      new window.mappls.Marker({
-        map: mapInstance,
-        position: mechanicPosition,
-        html: `<div style="font-size:2rem;">🧑‍🔧</div>`,
-      }).bindPopup("Your location.");
+  const mapInstance = new window.mappls.Map("map", {
+    center: mechanicPosition,
+    zoom: 13,
+  });
+
+  mapRef.current = mapInstance;
+  setMap(mapInstance); // <-- this is the missing piece
+
+  // mechanic marker
+  new window.mappls.Marker({
+    map: mapInstance,
+    position: mechanicPosition,
+    html: `<div style="font-size:2rem;">🧑‍🔧</div>`,
+    popupHtml: "<b>Your Location</b>",
+  });
+};
+
+
+    return () => {
+      // ✅ Cleanup map instance on unmount
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
+  }, [mechanicPosition]);
 
-    return () => document.body.removeChild(script);
-  }, []);
 
-  // Map markers for jobs
+
+
+
+  // Job markers when ONLINE
   useEffect(() => {
     if (!map) return;
 
@@ -66,7 +112,7 @@ export default function Dashboard() {
       { id: 3, position: { lat: 23.04, lng: 72.57 }, details: "Engine Diagnostic", payout: "₹1200" },
     ];
 
-    // Remove old markers
+    // Clear old markers
     markers.forEach((m) => m.remove());
     const newMarkers = [];
 
@@ -96,7 +142,8 @@ export default function Dashboard() {
   return (
     <div className="relative h-screen w-screen flex flex-col overflow-hidden">
       <Navbar
-        mechanicName="John Doe"
+        mechanicName={basicNeeds ? `${basicNeeds.first_name} ${basicNeeds.last_name}` : "Loading..."}
+        shopName={basicNeeds?.shop_name}
         isOnline={isOnline}
         setIsOnline={setIsOnline}
         isVerified={isVerified}
