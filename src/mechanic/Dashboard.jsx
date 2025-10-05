@@ -4,19 +4,26 @@ import RightPanel from "./componets/RightPanel";
 import api from "@/utils/api";
 
 export default function Dashboard() {
-  const mapRef = useRef(null); // store map instance
-  const mapInitializedRef = useRef(false); // track if map is initialized
-  const [mechanicPosition, setMechanicPosition] = useState({
-    lat: 23.0225,
-    lng: 72.5714, // default Ahmedabad
-  });
+  const mapRef = useRef(null);
+  const markersRef = useRef([]);
   const [map, setMap] = useState(null);
+  const [mechanicPosition, setMechanicPosition] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const [markers, setMarkers] = useState([]);
   const [basicNeeds, setBasicNeeds] = useState(null);
+  const [mapStatus, setMapStatus] = useState("loading");
+  const [locationStatus, setLocationStatus] = useState("getting");
+  const [lastLocationUpdate, setLastLocationUpdate] = useState(null);
 
-  // Fetch basic_needs (ignore error handling for now)
+  // Track initialization state
+  const initStateRef = useRef({
+    sdkLoaded: false,
+    initializing: false,
+    initialized: false,
+    retryCount: 0
+  });
+
+  // Fetch basic_needs
   useEffect(() => {
     const fetchBasicNeeds = async () => {
       try {
@@ -29,96 +36,363 @@ export default function Dashboard() {
         console.warn("Failed to fetch basic needs:", error);
       }
     };
-
     fetchBasicNeeds();
   }, []);
 
-  // Get mechanic location
+  // Get mechanic's location periodically (every 3-4 minutes)
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setMechanicPosition({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => console.warn("Geolocation error:", error.message)
-      );
-    }
-  }, []);
-
-  // Initialize Mappls map only once
-  useEffect(() => {
-    // 1️⃣ Map initialization function
-    const initMap = () => {
-      if (mapInitializedRef.current) return; // already initialized
-      const container = document.getElementById("map");
-      if (!container) return;
-
-      try {
-        const mapInstance = new window.mappls.Map("map", {
-          center: mechanicPosition,
-          zoom: 13,
-        });
-
-        mapRef.current = mapInstance;
-        mapInitializedRef.current = true;
-        setMap(mapInstance);
-
-        // Add mechanic marker
-        new window.mappls.Marker({
-          map: mapInstance,
-          position: mechanicPosition,
-          html: `<div style="font-size:2rem;">📍</div>`,
-          popupHtml: "<b>Your Location</b>",
-        });
-      } catch (error) {
-        console.error("Error initializing map:", error);
-      }
-    };
-
-    // 2️⃣ If SDK is already loaded
-    if (window.mappls && !mapInitializedRef.current) {
-      initMap();
+    if (!navigator.geolocation) {
+      console.error("Geolocation is not supported by this browser");
+      setLocationStatus("error");
+      setMechanicPosition({ lat: 23.0225, lng: 72.5714 });
       return;
     }
 
-    // 3️⃣ Dynamically load SDK script
-    if (!document.getElementById("mappls-sdk") && !mapInitializedRef.current) {
-      const script = document.createElement("script");
-      script.id = "mappls-sdk";
-      script.src =
-        "https://apis.mappls.com/advancedmaps/api/a645f44a39090467aa143b8da31f6dbd/map_sdk?layer=vector&v=3.0&callback=initMapCallback";
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
+    const getLocation = () => {
+      setLocationStatus("getting");
+
+      const successCallback = (position) => {
+        const newPosition = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        console.log("Location updated:", newPosition, new Date().toLocaleTimeString());
+        setMechanicPosition(newPosition);
+        setLocationStatus("success");
+        setLastLocationUpdate(new Date());
+        
+        // Update mechanic marker if map is already initialized
+        updateMechanicMarker(newPosition);
+      };
+
+      const errorCallback = (error) => {
+        console.error("Geolocation error:", error.message);
+        setLocationStatus("error");
+        // Fallback to default position only if we don't have any position
+        if (!mechanicPosition) {
+          setMechanicPosition({ lat: 23.0225, lng: 72.5714 });
+        }
+      };
+
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes - accept cached location if recent
+      };
+
+      navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+    };
+
+    // Get initial location immediately
+    getLocation();
+
+    // Set up interval for periodic updates (3-4 minutes)
+    const intervalTime = Math.random() * 60000 + 180000; // 3-4 minutes in milliseconds
+    const intervalId = setInterval(getLocation, intervalTime);
+
+    console.log(`Location update interval set to ${Math.round(intervalTime / 1000)} seconds`);
+
+    // Cleanup interval on unmount
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, []);
+
+  // Update mechanic marker when position changes
+  const updateMechanicMarker = (newPosition) => {
+    if (!mapRef.current) return;
+
+    // Remove existing mechanic marker
+    const mechanicMarker = markersRef.current.find(m => m._isMechanicMarker);
+    if (mechanicMarker) {
+      try {
+        mechanicMarker.remove();
+        markersRef.current = markersRef.current.filter(m => !m._isMechanicMarker);
+      } catch (error) {
+        console.warn("Error removing old mechanic marker:", error);
+      }
     }
 
-    // 4️⃣ Assign global callback (required by SDK)
-    window.initMapCallback = initMap;
+    // Add new mechanic marker
+    try {
+      const newMarker = new window.mappls.Marker({
+        map: mapRef.current,
+        position: newPosition,
+        html: `<div style="font-size:2rem;">📍</div>`,
+        popupHtml: `
+          <div style="font-family: sans-serif;">
+            <b>Your Location</b>
+            <br/>
+            <small>Last updated: ${lastLocationUpdate ? lastLocationUpdate.toLocaleTimeString() : 'Just now'}</small>
+            <br/>
+            <small>Lat: ${newPosition.lat.toFixed(6)}</small>
+            <br/>
+            <small>Lng: ${newPosition.lng.toFixed(6)}</small>
+          </div>
+        `,
+      });
+      newMarker._isMechanicMarker = true;
+      markersRef.current.push(newMarker);
 
-    // 5️⃣ Cleanup - only cleanup on component unmount
-    return () => {
-      if (mapRef.current && mapInitializedRef.current) {
-        try {
-          // Only attempt to remove if map is fully initialized
-          if (typeof mapRef.current.remove === "function") {
-            mapRef.current.remove();
+      // Center map on new position (only if it's a significant move)
+      const currentCenter = mapRef.current.getCenter();
+      if (currentCenter) {
+        const distance = getDistance(
+          currentCenter.lat, currentCenter.lng,
+          newPosition.lat, newPosition.lng
+        );
+        // Only re-center if moved more than 500 meters
+        if (distance > 500) {
+          mapRef.current.setCenter(newPosition);
+        }
+      } else {
+        mapRef.current.setCenter(newPosition);
+      }
+    } catch (error) {
+      console.warn("Error updating mechanic marker:", error);
+    }
+  };
+
+  // Helper function to calculate distance between two coordinates in meters
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // Manual location refresh function
+  const refreshLocation = () => {
+    if (!navigator.geolocation) return;
+    
+    setLocationStatus("getting");
+    
+    const successCallback = (position) => {
+      const newPosition = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      console.log("Manual location refresh:", newPosition);
+      setMechanicPosition(newPosition);
+      setLocationStatus("success");
+      setLastLocationUpdate(new Date());
+      updateMechanicMarker(newPosition);
+    };
+
+    const errorCallback = (error) => {
+      console.error("Manual location refresh error:", error.message);
+      setLocationStatus("error");
+    };
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    };
+
+    navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
+  };
+
+  // Main map initialization effect - depends on mechanicPosition
+  useEffect(() => {
+    let isMounted = true;
+
+    // Don't initialize map until we have a position
+    if (!mechanicPosition) {
+      return;
+    }
+
+    const initializeMap = () => {
+      if (!isMounted || initStateRef.current.initializing || initStateRef.current.initialized) {
+        return;
+      }
+
+      const container = document.getElementById("map");
+      if (!container) {
+        console.warn("Map container not found, retrying...");
+        if (initStateRef.current.retryCount < 3) {
+          initStateRef.current.retryCount++;
+          setTimeout(initializeMap, 500);
+        }
+        return;
+      }
+
+      if (!window.mappls || !window.mappls.Map) {
+        console.warn("Mappls SDK not available, retrying...");
+        if (initStateRef.current.retryCount < 3) {
+          initStateRef.current.retryCount++;
+          setTimeout(initializeMap, 500);
+        } else {
+          loadMapplsSDK();
+        }
+        return;
+      }
+
+      initStateRef.current.initializing = true;
+      setMapStatus("loading");
+
+      try {
+        console.log("Creating Mappls map instance with position:", mechanicPosition);
+        
+        // Create map with current mechanic position
+        const mapInstance = new window.mappls.Map("map", {
+          center: mechanicPosition,
+          zoom: 15,
+          zoomControl: true,
+        });
+
+        mapRef.current = mapInstance;
+
+        // Use both load event and timeout as fallback
+        const loadTimeout = setTimeout(() => {
+          if (isMounted && !initStateRef.current.initialized) {
+            console.log("Map load timeout, proceeding anyway...");
+            onMapReady(mapInstance);
           }
-        } catch (error) {
-          console.warn("Error removing map:", error);
-        } finally {
-          mapRef.current = null;
-          mapInitializedRef.current = false;
+        }, 5000);
+
+        mapInstance.on("load", () => {
+          clearTimeout(loadTimeout);
+          if (isMounted) {
+            onMapReady(mapInstance);
+          }
+        });
+
+        mapInstance.on("error", (error) => {
+          clearTimeout(loadTimeout);
+          console.error("Map error event:", error);
+          if (isMounted) {
+            setMapStatus("error");
+            initStateRef.current.initializing = false;
+          }
+        });
+
+      } catch (error) {
+        console.error("Error creating map instance:", error);
+        if (isMounted) {
+          setMapStatus("error");
+          initStateRef.current.initializing = false;
         }
       }
     };
-  }, []); // Remove mechanicPosition dependency to prevent re-initialization
 
-  // Job markers when ONLINE
+    const onMapReady = (mapInstance) => {
+      console.log("Map ready with position:", mechanicPosition);
+      initStateRef.current.initialized = true;
+      initStateRef.current.initializing = false;
+      setMap(mapInstance);
+      setMapStatus("loaded");
+      
+      addMechanicMarker(mapInstance);
+    };
+
+    const loadMapplsSDK = () => {
+      if (document.getElementById("mappls-sdk") || window.mappls) {
+        setTimeout(initializeMap, 100);
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.id = "mappls-sdk";
+      script.src = "https://apis.mappls.com/advancedmaps/api/a645f44a39090467aa143b8da31f6dbd/map_sdk?layer=vector&v=3.0";
+      script.async = true;
+      script.defer = true;
+      
+      script.onload = () => {
+        console.log("Mappls SDK loaded successfully");
+        initStateRef.current.sdkLoaded = true;
+        if (isMounted) {
+          setTimeout(initializeMap, 100);
+        }
+      };
+      
+      script.onerror = () => {
+        console.error("Failed to load Mappls SDK");
+        if (isMounted) {
+          setMapStatus("error");
+        }
+      };
+      
+      document.head.appendChild(script);
+    };
+
+    // Start initialization
+    initializeMap();
+
+    // Cleanup
+    return () => {
+      isMounted = false;
+      console.log("Dashboard unmounting, cleaning up map...");
+      cleanupMap();
+    };
+  }, [mechanicPosition]);
+
+  const addMechanicMarker = (mapInstance) => {
+    if (!mechanicPosition) return;
+    
+    try {
+      const marker = new window.mappls.Marker({
+        map: mapInstance,
+        position: mechanicPosition,
+        html: `<div style="font-size:2rem;">📍</div>`,
+        popupHtml: `
+          <div style="font-family: sans-serif;">
+            <b>Your Location</b>
+            <br/>
+            <small>Last updated: ${lastLocationUpdate ? lastLocationUpdate.toLocaleTimeString() : 'Just now'}</small>
+            <br/>
+            <small>Lat: ${mechanicPosition.lat.toFixed(6)}</small>
+            <br/>
+            <small>Lng: ${mechanicPosition.lng.toFixed(6)}</small>
+          </div>
+        `,
+      });
+      marker._isMechanicMarker = true;
+      markersRef.current.push(marker);
+    } catch (error) {
+      console.warn("Error adding mechanic marker:", error);
+    }
+  };
+
+  const cleanupMap = () => {
+    console.log("Cleaning up map resources...");
+    
+    // Clear markers
+    markersRef.current.forEach(marker => {
+      try {
+        if (marker && typeof marker.remove === "function") {
+          marker.remove();
+        }
+      } catch (error) {
+        console.warn("Error removing marker:", error);
+      }
+    });
+    markersRef.current = [];
+
+    // Remove map instance
+    if (mapRef.current) {
+      try {
+        mapRef.current = null;
+      } catch (error) {
+        console.warn("Error during map cleanup:", error);
+      }
+    }
+
+    initStateRef.current.initialized = false;
+    initStateRef.current.initializing = false;
+    setMap(null);
+  };
+
+  // Job markers effect
   useEffect(() => {
-    if (!map) return;
+    if (mapStatus !== "loaded" || !map) return;
 
     const jobRequests = [
       { id: 1, position: { lat: 23.03, lng: 72.58 }, details: "Flat Tire Change", payout: "₹500" },
@@ -126,23 +400,23 @@ export default function Dashboard() {
       { id: 3, position: { lat: 23.04, lng: 72.57 }, details: "Engine Diagnostic", payout: "₹1200" },
     ];
 
-    // Clear old markers
-    markers.forEach((m) => {
+    // Clear only job markers
+    const jobMarkers = markersRef.current.filter(m => m._isJobMarker);
+    jobMarkers.forEach(marker => {
       try {
-        if (m && typeof m.remove === "function") {
-          m.remove();
-        }
+        if (marker && marker.remove) marker.remove();
       } catch (error) {
-        console.warn("Error removing marker:", error);
+        console.warn("Error removing job marker:", error);
       }
     });
-    const newMarkers = [];
+    markersRef.current = markersRef.current.filter(m => !m._isJobMarker);
 
+    // Add new job markers if online
     if (isOnline) {
-      jobRequests.forEach((job) => {
+      jobRequests.forEach(job => {
         try {
           const marker = new window.mappls.Marker({
-            map,
+            map: map,
             position: job.position,
             html: `<div style="font-size:2rem;">⚒️</div>`,
             popupHtml: `
@@ -155,28 +429,14 @@ export default function Dashboard() {
               </div>
             `,
           });
-          newMarkers.push(marker);
+          marker._isJobMarker = true;
+          markersRef.current.push(marker);
         } catch (error) {
-          console.warn("Error creating marker:", error);
+          console.warn("Error creating job marker:", error);
         }
       });
     }
-
-    setMarkers(newMarkers);
-
-    // Cleanup markers on unmount or when isOnline changes
-    return () => {
-      newMarkers.forEach((m) => {
-        try {
-          if (m && typeof m.remove === "function") {
-            m.remove();
-          }
-        } catch (error) {
-          console.warn("Error removing marker in cleanup:", error);
-        }
-      });
-    };
-  }, [isOnline, map]);
+  }, [isOnline, map, mapStatus]);
 
   return (
     <div className="relative h-screen w-screen flex flex-col overflow-hidden">
@@ -190,6 +450,40 @@ export default function Dashboard() {
 
       <div className="relative flex-grow">
         <div id="map" className="h-full w-full z-0" />
+        
+        {/* Map status indicator */}
+        {mapStatus === "loading" && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+            {locationStatus === "getting" ? "Getting your location..." : "Loading map..."}
+          </div>
+        )}
+        
+        {mapStatus === "error" && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            Failed to load map. Please refresh the page.
+          </div>
+        )}
+
+        {/* Location status indicator */}
+        {locationStatus === "error" && (
+          <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+            Using default location. Enable location services for better accuracy.
+          </div>
+        )}
+
+        {/* Location update info */}
+        {/* {lastLocationUpdate && (
+          <div className="absolute top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded text-sm">
+            Location updated: {lastLocationUpdate.toLocaleTimeString()}
+            <button 
+              onClick={refreshLocation}
+              className="ml-2 bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs"
+            >
+              Refresh
+            </button>
+          </div>
+        )} */}
+
         <RightPanel
           shopName={basicNeeds?.shop_name}
           isOnline={isOnline}
