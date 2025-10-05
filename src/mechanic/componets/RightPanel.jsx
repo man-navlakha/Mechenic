@@ -204,7 +204,7 @@ const AvailableRequests = ({ isOnline }) => {
 };
 
 // Fixed Responsive Panel Component
-const ResponsivePanel = ({ isOnline, setIsOnline, isVerified }) => {
+const RightPanel = ({ isOnline, setIsOnline, isVerified }) => {
   const [newRequest, setNewRequest] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [isMobile, setIsMobile] = useState(false);
@@ -493,4 +493,4 @@ const ResponsivePanel = ({ isOnline, setIsOnline, isVerified }) => {
   );
 };
 
-export default ResponsivePanel;
+export default RightPanel;

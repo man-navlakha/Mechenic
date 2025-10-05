@@ -14,6 +14,15 @@ export default function Dashboard() {
   const [isVerified, setIsVerified] = useState(false);
   const [markers, setMarkers] = useState([]);
   const [basicNeeds, setBasicNeeds] = useState(null)
+  
+useEffect(() => {
+  return () => {
+    if (mapRef.current && typeof mapRef.current.destroy === "function") {
+      mapRef.current.destroy();
+      mapRef.current = null;
+    }
+  };
+}, []);
 
   // Fetch basic_needs (ignore error handling for now)
   useEffect(() => {
