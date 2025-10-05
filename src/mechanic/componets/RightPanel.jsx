@@ -1,14 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Car, Route, DollarSign, Clock, MapPin, User, Wrench
+  Car, Route, DollarSign, Clock, MapPin, User, Wrench, ChevronUp
 } from 'lucide-react';
 
 // Shadcn/ui components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -203,24 +201,26 @@ const AvailableRequests = ({ isOnline }) => {
   );
 };
 
-// Fixed Responsive Panel Component
+// Improved Mobile Panel Component
 const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, statusFromAPI, setStatusFromAPI }) => {
   const [newRequest, setNewRequest] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [isMobile, setIsMobile] = useState(false);
-  const [drawerPosition, setDrawerPosition] = useState('down');
-  const [isDragging, setIsDragging] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [currentHeight, setCurrentHeight] = useState(140);
 
-  const drawerRef = useRef(null);
-  const startYRef = useRef(0);
-  const startPositionRef = useRef(0);
+  const panelRef = useRef(null);
+  const isDraggingRef = useRef(false);
+
+  const COLLAPSED_HEIGHT = 140;
+  const EXPANDED_HEIGHT = window.innerHeight * 0.85;
 
   // Check screen size
   useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 768);
     };
-
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
@@ -231,71 +231,48 @@ const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, statusFromAPI
     setNewRequest(false);
   };
 
-  // Drag handlers
-  const handleDragStart = (e) => {
-    setIsDragging(true);
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    startYRef.current = clientY;
-    startPositionRef.current = drawerPosition;
-    e.preventDefault();
+  // Improved drag handling
+  const handleTouchStart = (e) => {
+    isDraggingRef.current = true;
+    setDragStartY(e.touches[0].clientY);
   };
 
-  const handleDragMove = (e) => {
-    if (!isDragging) return;
+  const handleTouchMove = (e) => {
+    if (!isDraggingRef.current) return;
+    
+    const currentY = e.touches[0].clientY;
+    const deltaY = dragStartY - currentY;
+    const startHeight = isExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
+    let newHeight = startHeight + deltaY;
+    
+    // Constrain height
+    newHeight = Math.max(COLLAPSED_HEIGHT, Math.min(EXPANDED_HEIGHT, newHeight));
+    setCurrentHeight(newHeight);
+  };
 
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    const deltaY = startYRef.current - clientY;
-
-    if (deltaY > 100) {
-      if (startPositionRef.current === 'down') setDrawerPosition('middle');
-      else if (startPositionRef.current === 'middle') setDrawerPosition('up');
-    } else if (deltaY < -100) {
-      if (startPositionRef.current === 'up') setDrawerPosition('middle');
-      else if (startPositionRef.current === 'middle') setDrawerPosition('down');
+  const handleTouchEnd = () => {
+    isDraggingRef.current = false;
+    
+    // Snap to nearest state
+    const threshold = (EXPANDED_HEIGHT + COLLAPSED_HEIGHT) / 2;
+    if (currentHeight > threshold) {
+      setIsExpanded(true);
+      setCurrentHeight(EXPANDED_HEIGHT);
+    } else {
+      setIsExpanded(false);
+      setCurrentHeight(COLLAPSED_HEIGHT);
     }
   };
 
-  const handleDragEnd = () => {
-    setIsDragging(false);
+  // Toggle expand/collapse
+  const toggleExpand = () => {
+    const newExpanded = !isExpanded;
+    setIsExpanded(newExpanded);
+    setCurrentHeight(newExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT);
   };
 
-  // Event listeners
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e) => handleDragMove(e);
-    const handleTouchMove = (e) => handleDragMove(e);
-    const handleMouseUp = () => handleDragEnd();
-    const handleTouchEnd = () => handleDragEnd();
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('touchmove', handleTouchMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isDragging]);
-
-  // Position styles
-  const getDrawerStyles = () => {
-    switch (drawerPosition) {
-      case 'up':
-        return 'top-4 h-[calc(100vh-2rem)]';
-      case 'middle':
-        return 'top-1/3 h-2/3';
-      case 'down':
-      default:
-        return 'top-[calc(100vh-120px)] h-28';
-    }
-  };
-
-  // Main content
-  const renderPanelContent = (isCompact = false) => {
+  // Desktop content
+  const renderDesktopContent = () => {
     if (newRequest) {
       return (
         <div className="h-full">
@@ -309,25 +286,21 @@ const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, statusFromAPI
 
     return (
       <div className="h-full flex flex-col">
-        {!isCompact && (
-          <>
-            <CardHeader className="pb-3 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">{shopName || "Loading..."}</CardTitle>
-                <StatusSwitch
-                  statusFromAPI={statusFromAPI}
-                  setStatusFromAPI={setStatusFromAPI}
-                  setIsOnline={setIsOnline}
-                  isVerified={isVerified}
-                />
-              </div>
-              <CardDescription>
-                {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
-              </CardDescription>
-            </CardHeader>
-            <Separator />
-          </>
-        )}
+        <CardHeader className="pb-3 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl">{shopName || "Loading..."}</CardTitle>
+            <StatusSwitch
+              statusFromAPI={statusFromAPI}
+              setStatusFromAPI={setStatusFromAPI}
+              setIsOnline={setIsOnline}
+              isVerified={isVerified}
+            />
+          </div>
+          <CardDescription>
+            {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
+          </CardDescription>
+        </CardHeader>
+        <Separator />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2 flex-shrink-0 mx-4 mt-4">
@@ -386,49 +359,11 @@ const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, statusFromAPI
     );
   };
 
-  // Mobile compact header
-  const renderMobileCompactHeader = () => (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 pb-2">
-        <div>
-          <CardTitle className="text-lg">{shopName || "Loading..."}</CardTitle>
-          <CardDescription className="text-xs">
-            {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
-          </CardDescription>
-        </div>
-        <StatusSwitch
-          statusFromAPI={statusFromAPI}
-          setStatusFromAPI={setStatusFromAPI}
-          setIsOnline={setIsOnline}
-          isVerified={isVerified}
-        />
-      </div>
-
-      <div className="flex-1 p-4 pt-0">
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p className="font-bold text-green-600">₹1,250</p>
-            <p className="text-xs text-muted-foreground">Today</p>
-          </div>
-          <div>
-            <p className="font-bold text-blue-600">5</p>
-            <p className="text-xs text-muted-foreground">Jobs</p>
-          </div>
-          <div>
-            <Badge variant={isOnline ? "default" : "secondary"} className="text-xs">
-              {isOnline ? 'Active' : 'Offline'}
-            </Badge>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Mobile drawer
-  if (isMobile) {
+  // Mobile drawer content
+  const renderMobileContent = () => {
     if (newRequest) {
       return (
-        <div className="fixed inset-4 z-50">
+        <div className="h-full p-4">
           <NewJobRequest
             onReject={() => setNewRequest(false)}
             onAccept={handleAcceptJob}
@@ -437,34 +372,158 @@ const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, statusFromAPI
       );
     }
 
+    if (!isExpanded) {
+      // Collapsed view - rich preview
+      return (
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-base">{shopName || "Loading..."}</h3>
+                <Badge variant={isOnline ? "default" : "secondary"} className="text-xs">
+                  {isOnline ? 'Online' : 'Offline'}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {isOnline ? 'Ready to accept jobs' : 'Tap to go online'}
+              </p>
+            </div>
+            <StatusSwitch
+              statusFromAPI={statusFromAPI}
+              setStatusFromAPI={setStatusFromAPI}
+              setIsOnline={setIsOnline}
+              isVerified={isVerified}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-green-50 rounded-lg p-2 text-center">
+              <p className="font-bold text-green-600">₹1.2K</p>
+              <p className="text-[10px] text-muted-foreground">Today</p>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-2 text-center">
+              <p className="font-bold text-blue-600">5</p>
+              <p className="text-[10px] text-muted-foreground">Jobs</p>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-2 text-center">
+              <p className="font-bold text-purple-600">3</p>
+              <p className="text-[10px] text-muted-foreground">Requests</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Expanded view - full content
+    return (
+      <div className="h-full flex flex-col">
+        <div className="px-4 pb-2 flex-shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-lg">{shopName || "Loading..."}</h3>
+            <StatusSwitch
+              statusFromAPI={statusFromAPI}
+              setStatusFromAPI={setStatusFromAPI}
+              setIsOnline={setIsOnline}
+              isVerified={isVerified}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
+          </p>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2 mx-4 mb-2">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="earnings">Earnings</TabsTrigger>
+          </TabsList>
+
+          <ScrollArea className="flex-1">
+            <TabsContent value="overview" className="p-4 pt-2 m-0">
+              <div className="space-y-3">
+                <Card className={isOnline ? "bg-green-50 border-green-200" : "bg-gray-50"}>
+                  <CardContent className="p-3">
+                    <div className="text-center">
+                      <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full ${isOnline ? 'bg-green-100' : 'bg-gray-100'} mb-2`}>
+                        <Wrench className={isOnline ? "text-green-600" : "text-gray-400"} size={20} />
+                      </div>
+                      <h3 className={`font-semibold text-sm ${isOnline ? 'text-green-700' : 'text-gray-600'}`}>
+                        {isOnline ? 'Active & Available' : 'Offline Mode'}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {isOnline ? 'Receiving requests' : 'Go online to work'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Button
+                  onClick={() => setNewRequest(true)}
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-dashed"
+                  disabled={!isOnline}
+                >
+                  Simulate Job Request
+                </Button>
+
+                <div>
+                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <Route size={14} />
+                    Available Requests
+                  </h4>
+                  <AvailableRequests isOnline={isOnline} />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="earnings" className="p-4 pt-2 m-0">
+              <EarningsSummary />
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+      </div>
+    );
+  };
+
+  // Mobile drawer
+  if (isMobile) {
     return (
       <>
-        {(drawerPosition === 'middle' || drawerPosition === 'up') && (
+        {isExpanded && (
           <div
-            className="fixed inset-0 bg-black/20 z-40"
-            onClick={() => setDrawerPosition('down')}
+            className="fixed inset-0 bg-black/30 z-40 transition-opacity"
+            onClick={toggleExpand}
           />
         )}
 
         <div
-          ref={drawerRef}
-          className={`
-            fixed left-4 right-4 z-50
-            bg-background rounded-t-2xl rounded-b-2xl shadow-2xl border
-            transition-all duration-300 ease-out overflow-hidden
-            ${getDrawerStyles()}
-          `}
+          ref={panelRef}
+          className="fixed left-0 right-0 bottom-0 z-50 bg-background rounded-t-3xl shadow-2xl border-t overflow-hidden"
+          style={{
+            height: `${currentHeight}px`,
+            transition: isDraggingRef.current ? 'none' : 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
         >
+          {/* Enhanced drag handle */}
           <div
-            className="flex justify-center py-3 cursor-grab active:cursor-grabbing"
-            onMouseDown={handleDragStart}
-            onTouchStart={handleDragStart}
+            className="flex flex-col items-center pt-2 pb-1 cursor-grab active:cursor-grabbing"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onClick={toggleExpand}
           >
-            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full"></div>
+            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full mb-1"></div>
+            <ChevronUp
+              size={16}
+              className={`text-muted-foreground/50 transition-transform duration-300 ${
+                isExpanded ? 'rotate-180' : ''
+              }`}
+            />
           </div>
 
-          <div className="h-[calc(100%-44px)]">
-            {drawerPosition === 'down' ? renderMobileCompactHeader() : renderPanelContent()}
+          <div className="h-[calc(100%-40px)] overflow-hidden">
+            {renderMobileContent()}
           </div>
         </div>
       </>
@@ -475,7 +534,7 @@ const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, statusFromAPI
   return (
     <div className="absolute top-4 right-4 w-80 h-[calc(100vh-8rem)] z-10">
       <Card className="h-full shadow-xl border-0 flex flex-col">
-        {renderPanelContent()}
+        {renderDesktopContent()}
       </Card>
     </div>
   );
