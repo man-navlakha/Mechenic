@@ -5,6 +5,7 @@ import api from "@/utils/api";
 
 export default function Dashboard() {
   const mapRef = useRef(null); // store map instance
+  const mapInitializedRef = useRef(false); // track if map is initialized
   const [mechanicPosition, setMechanicPosition] = useState({
     lat: 23.0225,
     lng: 72.5714, // default Ahmedabad
@@ -13,16 +14,7 @@ export default function Dashboard() {
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [markers, setMarkers] = useState([]);
-  const [basicNeeds, setBasicNeeds] = useState(null)
-  useEffect(() => {
-    return () => {
-      if (mapRef.current && typeof mapRef.current.remove === "function") {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, []);
-
+  const [basicNeeds, setBasicNeeds] = useState(null);
 
   // Fetch basic_needs (ignore error handling for now)
   useEffect(() => {
@@ -56,41 +48,44 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Load Mappls SDK
   // Initialize Mappls map only once
-  // Load Mappls SDK and initialize map
   useEffect(() => {
+    // 1️⃣ Map initialization function
     const initMap = () => {
-      if (mapRef.current) return; // already initialized
-
+      if (mapInitializedRef.current) return; // already initialized
       const container = document.getElementById("map");
       if (!container) return;
 
-      const mapInstance = new window.mappls.Map("map", {
-        center: mechanicPosition,
-        zoom: 13,
-      });
+      try {
+        const mapInstance = new window.mappls.Map("map", {
+          center: mechanicPosition,
+          zoom: 13,
+        });
 
-      mapRef.current = mapInstance;
-      setMap(mapInstance);
+        mapRef.current = mapInstance;
+        mapInitializedRef.current = true;
+        setMap(mapInstance);
 
-      // Add mechanic marker
-      const mechMarker = new window.mappls.Marker({
-        map: mapInstance,
-        position: mechanicPosition,
-        html: `<div style="font-size:2rem;">🧑‍🔧</div>`,
-        popupHtml: "<b>Your Location</b>",
-      });
+        // Add mechanic marker
+        new window.mappls.Marker({
+          map: mapInstance,
+          position: mechanicPosition,
+          html: `<div style="font-size:2rem;">🧑‍🔧</div>`,
+          popupHtml: "<b>Your Location</b>",
+        });
+      } catch (error) {
+        console.error("Error initializing map:", error);
+      }
     };
 
-    // If SDK already loaded
-    if (window.mappls) {
+    // 2️⃣ If SDK is already loaded
+    if (window.mappls && !mapInitializedRef.current) {
       initMap();
       return;
     }
 
-    // Dynamically load SDK
-    if (!document.getElementById("mappls-sdk")) {
+    // 3️⃣ Dynamically load SDK script
+    if (!document.getElementById("mappls-sdk") && !mapInitializedRef.current) {
       const script = document.createElement("script");
       script.id = "mappls-sdk";
       script.src =
@@ -100,22 +95,26 @@ export default function Dashboard() {
       document.body.appendChild(script);
     }
 
-    // Make callback global
+    // 4️⃣ Assign global callback (required by SDK)
     window.initMapCallback = initMap;
 
+    // 5️⃣ Cleanup - only cleanup on component unmount
     return () => {
-      // cleanup
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
+      if (mapRef.current && mapInitializedRef.current) {
+        try {
+          // Only attempt to remove if map is fully initialized
+          if (typeof mapRef.current.remove === "function") {
+            mapRef.current.remove();
+          }
+        } catch (error) {
+          console.warn("Error removing map:", error);
+        } finally {
+          mapRef.current = null;
+          mapInitializedRef.current = false;
+        }
       }
     };
-  }, [mechanicPosition]);
-
-
-
-
-
+  }, []); // Remove mechanicPosition dependency to prevent re-initialization
 
   // Job markers when ONLINE
   useEffect(() => {
@@ -128,30 +127,55 @@ export default function Dashboard() {
     ];
 
     // Clear old markers
-    markers.forEach((m) => m.remove());
+    markers.forEach((m) => {
+      try {
+        if (m && typeof m.remove === "function") {
+          m.remove();
+        }
+      } catch (error) {
+        console.warn("Error removing marker:", error);
+      }
+    });
     const newMarkers = [];
 
     if (isOnline) {
       jobRequests.forEach((job) => {
-        const marker = new window.mappls.Marker({
-          map,
-          position: job.position,
-          html: `<div style="font-size:2rem;">⚒️</div>`,
-          popupHtml: `
-            <div style="font-family: sans-serif;">
-              <h3 style="font-weight: bold; font-size: 14px;">${job.details}</h3>
-              <p>Estimated Payout: <span style="color: green; font-weight: 600;">${job.payout}</span></p>
-              <button style="margin-top:5px; padding:4px 8px; background:#3B82F6; color:white; border:none; border-radius:4px; cursor:pointer;">
-                Accept Job
-              </button>
-            </div>
-          `,
-        });
-        newMarkers.push(marker);
+        try {
+          const marker = new window.mappls.Marker({
+            map,
+            position: job.position,
+            html: `<div style="font-size:2rem;">⚒️</div>`,
+            popupHtml: `
+              <div style="font-family: sans-serif;">
+                <h3 style="font-weight: bold; font-size: 14px;">${job.details}</h3>
+                <p>Estimated Payout: <span style="color: green; font-weight: 600;">${job.payout}</span></p>
+                <button style="margin-top:5px; padding:4px 8px; background:#3B82F6; color:white; border:none; border-radius:4px; cursor:pointer;">
+                  Accept Job
+                </button>
+              </div>
+            `,
+          });
+          newMarkers.push(marker);
+        } catch (error) {
+          console.warn("Error creating marker:", error);
+        }
       });
     }
 
     setMarkers(newMarkers);
+
+    // Cleanup markers on unmount or when isOnline changes
+    return () => {
+      newMarkers.forEach((m) => {
+        try {
+          if (m && typeof m.remove === "function") {
+            m.remove();
+          }
+        } catch (error) {
+          console.warn("Error removing marker in cleanup:", error);
+        }
+      });
+    };
   }, [isOnline, map]);
 
   return (
