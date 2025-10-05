@@ -1,299 +1,480 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Car, Route, DollarSign, Clock, MapPin, User, Wrench
+  Phone, MapPin, XCircle, CheckCircle, Clock, Map, TrendingUp, Calendar, Award, Info, Search
 } from 'lucide-react';
-
-// Shadcn/ui components
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Progress } from '@/components/ui/progress';
 
-import StatusSwitch from './StatusSwitch';
-
-// ✅ New Job Request Component
-const NewJobRequest = ({ onReject, onAccept }) => (
-  <Card className="w-full h-full flex flex-col">
-    <CardHeader className="pb-3 bg-gradient-to-r from-red-50 to-orange-50">
-      <div className="flex items-center space-x-3">
-        <div className="bg-red-100 p-2 rounded-full">
-          <Car className="text-red-600" size={24} />
-        </div>
-        <div>
-          <CardTitle className="text-lg">Car Assistance</CardTitle>
-          <CardDescription>Customer needs help with puncture repair</CardDescription>
-        </div>
-      </div>
-    </CardHeader>
-
-    <CardContent className="flex-1 p-4 space-y-4 overflow-y-auto">
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="text-center p-3">
-          <Route className="text-blue-500 mx-auto mb-2" size={20} />
-          <p className="font-semibold text-lg">1.5 km</p>
-          <p className="text-xs text-muted-foreground">Distance</p>
-        </Card>
-        <Card className="text-center p-3">
-          <DollarSign className="text-green-500 mx-auto mb-2" size={20} />
-          <p className="font-semibold text-lg">₹165</p>
-          <p className="text-xs text-muted-foreground">Earnings</p>
-        </Card>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground">Request ID:</span>
-          <Badge variant="secondary">#1575775795880</Badge>
-        </div>
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground">Vehicle Type:</span>
-          <span className="font-medium">Car</span>
-        </div>
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground">Requested:</span>
-          <span className="font-medium">3:32:38 PM</span>
-        </div>
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground">Estimated Time:</span>
-          <Badge variant="outline">5 mins</Badge>
-        </div>
-      </div>
-
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="p-3">
-          <div className="flex items-start space-x-2">
-            <User className="text-blue-600 mt-0.5 flex-shrink-0" size={16} />
-            <div>
-              <h4 className="font-semibold text-sm">Customer Details</h4>
-              <p className="text-xs text-muted-foreground">
-                After accepting, you'll get customer contact details
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-green-50 border-green-200">
-        <CardContent className="p-3">
-          <div className="flex items-start space-x-2">
-            <MapPin className="text-green-600 mt-0.5 flex-shrink-0" size={16} />
-            <div>
-              <h4 className="font-semibold text-sm">Location</h4>
-              <p className="text-xs text-muted-foreground">
-                Near City Center, Ahmedabad
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </CardContent>
-
-    <div className="p-4 border-t bg-muted/20">
-      <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" onClick={onReject} className="border-red-200 text-red-600 hover:bg-red-50">
-          Reject
-        </Button>
-        <Button onClick={onAccept} className="bg-green-600 hover:bg-green-700">
-          Accept Job
-        </Button>
-      </div>
-    </div>
-  </Card>
-);
-
-// ✅ Earnings Summary Component
-const EarningsSummary = () => (
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-lg flex items-center gap-2">
-        <DollarSign className="text-green-500" size={20} />
-        Earnings Summary
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span>Today</span>
-          <span className="font-semibold">₹1,250</span>
-        </div>
-        <Progress value={65} className="h-2" />
-      </div>
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span>This Week</span>
-          <span className="font-semibold">₹8,750</span>
-        </div>
-        <Progress value={85} className="h-2" />
-      </div>
-      <div className="grid grid-cols-2 gap-4 pt-2">
-        <div className="text-center p-3 bg-muted rounded-lg">
-          <p className="text-2xl font-bold text-green-600">₹42K</p>
-          <p className="text-xs text-muted-foreground">This Month</p>
-        </div>
-        <div className="text-center p-3 bg-muted rounded-lg">
-          <p className="text-2xl font-bold text-blue-600">127</p>
-          <p className="text-xs text-muted-foreground">Total Jobs</p>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-// ✅ Available Requests Component
-const AvailableRequests = ({ isOnline }) => {
-  const requests = [
-    { id: 1, service: "Battery Jumpstart", distance: "2.1km", payout: "₹700", time: "5 min ago" },
-    { id: 2, service: "Flat Tire Repair", distance: "1.8km", payout: "₹500", time: "8 min ago" },
-    { id: 3, service: "Engine Check", distance: "3.2km", payout: "₹1200", time: "12 min ago" },
-  ];
-
-  if (!isOnline) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <Wrench className="mx-auto text-muted-foreground mb-2" size={32} />
-          <p className="text-muted-foreground">Go online to see available requests</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {requests.map((request) => (
-        <Card key={request.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start mb-2">
-              <h4 className="font-semibold">{request.service}</h4>
-              <Badge variant="secondary">{request.payout}</Badge>
-            </div>
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Route size={14} />
-                {request.distance}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock size={14} />
-                {request.time}
-              </span>
-            </div>
-            <Button size="sm" className="w-full mt-3">
-              View Details
-            </Button>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+// --- CONSTANTS ---
+const STATUS_TEXT = {
+  SEARCHING: '🔍 Searching...',
+  ONLINE: 'Online • Active',
+  OFFLINE: 'Offline Mode',
+  NEW_ORDER: 'New Order',
 };
 
-// ✅ Right Panel Component
-const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, statusFromAPI, setStatusFromAPI }) => {
-  const [newRequest, setNewRequest] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+// --- MOCK DATA ---
+const mockDashboardData = {
+  today: {
+    earnings: 634.64,
+    trips: 17,
+    timeOnOrders: '07:11 hrs',
+    gigs: 4,
+  },
+  partnerStatus: {
+    level: 'BLUE PARTNER',
+    period: 'for week 02 Dec - 08 Dec',
+    message: 'Learn more on how you can improve your performance and get Bronze medal',
+  },
+  jobHistory: [
+    { id: 1001, earning: 60.50, timestamp: '10 mins ago', status: 'Completed' },
+    { id: 1002, earning: 75.00, timestamp: '25 mins ago', status: 'Completed' },
+    { id: 1003, earning: 52.25, timestamp: '45 mins ago', status: 'Cancelled' },
+  ],
+  dailyIncentive: {
+    completed: 1,
+    target: 23,
+    reward: 200,
+  }
+};
 
-  const handleAcceptJob = () => {
-    console.log("Job accepted!");
-    setNewRequest(false);
+
+// --- REUSABLE UI COMPONENTS (No changes here) ---
+
+const SearchingForOrders = () => (
+  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4">
+      <Search className="text-blue-500" size={32} />
+    </div>
+    <h3 className="text-lg font-semibold text-gray-700 mb-2">Searching for orders...</h3>
+    <p className="text-gray-500 mb-6">Explore your zone 😊</p>
+    <div className="w-16 h-1 bg-gradient-to-r from-blue-200 to-blue-300 rounded-full"></div>
+  </div>
+);
+
+const PickupCard = ({ order, onCall, onMap, onAccept, onReject, showStatus }) => (
+  <Card className="shadow-md rounded-xl border-0 mb-4">
+    {showStatus && (
+      <div className="sticky top-0 bg-gradient-to-r from-amber-50 to-amber-100 px-4 py-2 flex items-center justify-between rounded-t-xl border-b">
+        <span className="text-xs font-semibold text-amber-800">{order.accepted ? 'Accepted Order' : 'New Request'}</span>
+        <Badge variant="secondary">{order.pickupDistance}</Badge>
+      </div>
+    )}
+    <CardHeader className="px-4 pb-2 pt-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-md bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
+          <MapPin className="text-amber-700" size={20} />
+        </div>
+        <div className="flex-1">
+          <CardTitle className="text-sm font-semibold mb-0">{order.placeName}</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">{order.address}</p>
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="px-4 pt-2 pb-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-xs text-muted-foreground">Expected earnings</p>
+          <p className="text-lg font-bold">₹{order.payout}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground">Drop Distance</p>
+          <p className="font-medium">{order.dropDistance}</p>
+        </div>
+      </div>
+      <Separator />
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <Button variant="outline" className="flex items-center gap-2 justify-center py-2" onClick={onCall}><Phone size={16} />Call</Button>
+        <Button variant="ghost" className="flex items-center gap-2 justify-center py-2" onClick={onMap}><Map size={16} />Map</Button>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <Button variant="destructive" className="flex-1 py-2" onClick={onReject}><XCircle size={16} />Reject</Button>
+        <Button className="flex-1 py-2" onClick={onAccept}><CheckCircle size={16} />Accept</Button>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const EarningsDashboard = ({ today }) => (
+  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-sm">
+    <CardContent className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-700">Today's progress</h3>
+        <Badge variant="outline" className="bg-white/60">Today</Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-4 mb-3">
+        <div className="bg-white/70 rounded-lg p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={16} className="text-green-600" />
+            <span className="text-2xl font-bold text-gray-800">{today.earnings.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-600">Earnings</span>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button>
+          </div>
+        </div>
+        <div className="bg-white/70 rounded-lg p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar size={16} className="text-blue-600" />
+            <span className="text-2xl font-bold text-gray-800">{today.trips}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-600">Trips</span>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white/70 rounded-lg p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock size={16} className="text-orange-600" />
+            <span className="text-lg font-bold text-gray-800">{today.timeOnOrders}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-600">Time on orders</span>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button>
+          </div>
+        </div>
+        <div className="bg-white/70 rounded-lg p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Award size={16} className="text-purple-600" />
+            <span className="text-lg font-bold text-gray-800">{today.gigs} Gigs</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-600">History</span>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button>
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const PartnerStatusCard = ({ partnerStatus }) => (
+  <Card className="bg-gradient-to-br from-blue-100 to-blue-200 border-0 shadow-sm">
+    <CardContent className="p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+          <span className="text-sm font-semibold text-blue-900">{partnerStatus.level}</span>
+        </div>
+        <Info size={16} className="text-blue-700" />
+      </div>
+      <p className="text-xs text-blue-800 mb-2">{partnerStatus.period}</p>
+      <p className="text-xs text-blue-700 mb-3">{partnerStatus.message}</p>
+      <Button variant="outline" size="sm" className="w-full bg-white/50 text-blue-800 border-blue-300 text-xs">
+        View Performance Details
+      </Button>
+    </CardContent>
+  </Card>
+);
+
+const JobHistory = ({ history = [] }) => (
+  <Card className="mt-4">
+    <CardHeader className="pb-3">
+      <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle>
+    </CardHeader>
+    <CardContent className="pt-0">
+      {history.length > 0 ? (
+        <div className="space-y-2">
+          {history.map((job) => (
+            <div key={job.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-xs">
+              <div>
+                <p className="font-medium">Delivery #{job.id}</p>
+                <p className="text-muted-foreground">₹{job.earning.toFixed(2)} • {job.timestamp}</p>
+              </div>
+              <Badge variant={job.status === 'Completed' ? 'secondary' : 'destructive'}>{job.status}</Badge>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-4">
+          <p className="text-sm text-gray-500">No recent activity to show.</p>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const PartnerDashboard = ({ data }) => (
+  <div className="space-y-4">
+    <EarningsDashboard today={data.today} />
+    <PartnerStatusCard partnerStatus={data.partnerStatus} />
+    <JobHistory history={data.jobHistory} />
+  </div>
+);
+
+const MobileOnlineStatus = () => (
+  <div className="flex items-center justify-between px-2 py-1">
+  {/* Left Section: Status + Text */}
+  <div className="flex items-center gap-3">
+    {/* Icon with Ping */}
+    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+  <Search className="animate-ping absolute text-blue-500" size={20} />
+  <Search className="text-blue-500" size={20} />
+</div>
+
+
+    {/* Text Info */}
+    <div className="flex flex-col">
+      <span className="text-sm font-medium text-gray-800">Searching for orders...</span>
+      <span className="text-xs text-gray-500">Explore your zone 😊</span>
+    </div>
+  </div>
+
+  {/* Right Section: Status Pulse */}
+  <div className="flex items-center gap-2 text-blue-600 font-medium animate-pulse">
+    <span className="relative flex h-3 w-3">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+      <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+    </span>
+    <span className="text-xs">Live</span>
+  </div>
+</div>
+
+);
+
+const StatusToggleButton = ({ isOnline, setIsOnline, shopName }) => (
+  <div className="flex items-center justify-between p-3 bg-white/70 rounded-xl shadow-sm">
+    <div className="text-sm">
+      <div className="font-medium">{shopName || 'Your Workshop'}</div>
+      <div className={`text-xs font-semibold ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
+        {isOnline ? (
+          <div className="flex items-center gap-2 text-green-600 font-medium">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <span>Online</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-red-600 font-medium">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+            </span>
+            <span>Offline</span>
+          </div>
+        )}
+
+
+      </div>
+    </div>
+    <Button
+      size="sm"
+      variant={isOnline ? "outline" : "default"}
+      onClick={() => setIsOnline(!isOnline)}
+      className={isOnline ? "border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700" : "bg-green-600 hover:bg-green-700"}
+    >
+      {isOnline ? 'Go Offline' : 'Go Online'}
+    </Button>
+  </div>
+);
+
+// --- MAIN COMPONENT ---
+
+export default function RightPanel({ shopName, isOnline, setIsOnline }) {
+  const [currentOrder, setCurrentOrder] = useState(null);
+  // NEW: State to control the mobile details sheet
+  const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const shouldShowDashboard = !currentOrder && !isSearching;
+
+  useEffect(() => {
+    let searchTimer;
+    if (isOnline && !currentOrder) {
+      setIsSearching(true);
+      searchTimer = setTimeout(() => {
+        setIsSearching(false);
+      }, 3000);
+    } else {
+      setIsSearching(false);
+    }
+    return () => clearTimeout(searchTimer);
+  }, [isOnline, currentOrder]);
+
+  const simulateNewOrder = () => {
+    if (!isOnline) return;
+    setIsSearching(true);
+    setTimeout(() => {
+      setIsSearching(false);
+      setCurrentOrder({
+        id: 'job_9999',
+        placeName: "Test Restaurant",
+        address: '123 Test Street, Example City',
+        payout: 72.5,
+        pickupDistance: '1.2 km',
+        dropDistance: '3.4 km',
+        phone: '+91-90000-00000',
+        accepted: false,
+      });
+    }, 1500);
   };
+
+  const handleAccept = () => setCurrentOrder((o) => ({ ...o, accepted: true }));
+  const handleReject = () => setCurrentOrder(null);
+  const handleCall = () => window.open(`tel:${currentOrder.phone}`);
+  const handleMap = () => console.log('Map open');
 
   const renderDesktopContent = () => {
-    if (newRequest) {
+    if (currentOrder) {
       return (
-        <div className="h-full">
-          <NewJobRequest
-            onReject={() => setNewRequest(false)}
-            onAccept={handleAcceptJob}
-          />
-        </div>
+        <PickupCard
+          order={currentOrder}
+          onCall={handleCall} onMap={handleMap}
+          onAccept={handleAccept} onReject={handleReject}
+          showStatus
+        />
       );
     }
-
-    return (
-      <div className="h-full flex flex-col">
-        <CardHeader className="pb-3 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl">{shopName || "Loading..."}</CardTitle>
-            <StatusSwitch
-              statusFromAPI={statusFromAPI}
-              setStatusFromAPI={setStatusFromAPI}
-              setIsOnline={setIsOnline}
-              isVerified={isVerified}
-            />
-          </div>
-          <CardDescription>
-            {isOnline ? 'Ready to accept jobs' : 'Currently offline'}
-          </CardDescription>
-        </CardHeader>
-        <Separator />
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-2 flex-shrink-0 mx-4 mt-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="earnings">Earnings</TabsTrigger>
-          </TabsList>
-
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <TabsContent value="overview" className="h-full p-4 space-y-4 m-0">
-              <ScrollArea className="h-full">
-                <div className="space-y-4 pb-4">
-                  <Card className={isOnline ? "bg-green-50 border-green-200" : "bg-gray-50"}>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${isOnline ? 'bg-green-100' : 'bg-gray-100'} mb-2`}>
-                          <Wrench className={isOnline ? "text-green-600" : "text-gray-400"} size={24} />
-                        </div>
-                        <h3 className={`font-semibold ${isOnline ? 'text-green-700' : 'text-gray-600'}`}>
-                          {isOnline ? 'Active and Available' : 'Offline Mode'}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {isOnline ? 'Receiving job requests' : 'Go online to start working'}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Button
-                    onClick={() => setNewRequest(true)}
-                    variant="outline"
-                    className="w-full border-dashed"
-                    disabled={!isOnline}
-                  >
-                    Simulate New Job Request
-                  </Button>
-
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <Route size={16} />
-                      Available Requests
-                    </h4>
-                    <AvailableRequests isOnline={isOnline} />
-                  </div>
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="earnings" className="h-full p-4 m-0">
-              <ScrollArea className="h-full">
-                <EarningsSummary />
-              </ScrollArea>
-            </TabsContent>
-          </div>
-        </Tabs>
-      </div>
-    );
+  
+    return <PartnerDashboard data={mockDashboardData} />;
   };
 
   return (
-    <div className="absolute top-4 right-4 w-80 h-[calc(100vh-8rem)] z-10">
-      <Card className="h-full shadow-xl border-0 flex flex-col">
-        {renderDesktopContent()}
-      </Card>
-    </div>
-  );
-};
+    <>
+      {/* Desktop layout */}
+      <div className="hidden sm:flex flex-col fixed right-4 top-9 bottom-4 w-96 bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/40 overflow-y-scroll">
+        <div className="sticky top-7 mt-9 bg-gradient-to-r from-blue-100 to-indigo-100 px-4 py-3 border-b z-10">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold text-blue-800">
+              {isOnline ? (isSearching ? STATUS_TEXT.SEARCHING : STATUS_TEXT.ONLINE) : STATUS_TEXT.OFFLINE}
+            </div>
+            {currentOrder && <Badge className="bg-amber-200 text-amber-800 animate-pulse">{STATUS_TEXT.NEW_ORDER}</Badge>}
+          </div>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-4">
+            <div className="mb-4">
+              <StatusToggleButton isOnline={isOnline} setIsOnline={setIsOnline} shopName={shopName} />
+            </div>
+            {isOnline && shouldShowDashboard && (
+              <>
+              <Button variant="outline" className="w-full mb-4" onClick={simulateNewOrder}>
+                + Simulate New Order (Test)
+              </Button>
 
-export default RightPanel;
+                
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 mb-5 ">
+          <CardContent className="p-6"><SearchingForOrders /></CardContent>
+        </Card>
+              </>
+            )}
+            {renderDesktopContent()}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Mobile layout */}
+      <div className="sm:hidden">
+        {currentOrder ? (
+          // Mobile: Show order details in a sheet when an order is active
+          <Sheet open={true} onOpenChange={() => { }}>
+            <SheetContent side="bottom" className="max-h-[92vh] p-0 bg-white/80 backdrop-blur-xl border-t rounded-t-2xl">
+              <div className="p-4">
+                <PickupCard
+                  order={currentOrder}
+                  onCall={handleCall} onMap={handleMap}
+                  onAccept={handleAccept} onReject={handleReject}
+                  showStatus
+                />
+              </div>
+              
+            </SheetContent>
+
+            
+          </Sheet>
+        ) : (
+          // Mobile: Show status bar at the bottom when no active order
+          <div className="fixed inset-x-4 bottom-4 z-50">
+            {isOnline ? (
+              // IMPROVEMENT: Consolidated online view into a single, clean panel
+              <div className="bg-white/80 backdrop-blur-lg rounded-xl p-3 shadow-lg flex flex-col gap-3">
+                <MobileOnlineStatus />
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <div className="font-medium">{shopName || 'Your Workshop'}</div>
+                    {isOnline ? (
+                      <div className="flex items-center gap-2 text-green-600 font-medium">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                        <span>Online</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-red-600 font-medium">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                        <span>Offline</span>
+                      </div>
+                    )}
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setIsOnline(false)} className="border-red-300 text-red-600">
+                    Go Offline
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="secondary" size="sm" onClick={simulateNewOrder}>+ Simulate Order</Button>
+                  {/* NEW: Button to trigger the details sheet */}
+                  <Sheet open={detailsSheetOpen} onOpenChange={setDetailsSheetOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="default" size="sm">View Details</Button>
+                    </SheetTrigger>
+                    <SheetContent side="bottom" className="max-h-[92vh] p-0 bg-gray-50 border-t rounded-t-2xl">
+                      <ScrollArea className="h-[88vh]">
+                        <div className="p-4">
+                          <PartnerDashboard data={mockDashboardData} />
+                        </div>
+                      </ScrollArea>
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </div>
+            ) : (
+              // Offline view
+              <div className="bg-white/80 backdrop-blur-lg rounded-xl p-3 shadow-lg">
+                <div className='flex items-center justify-between '>
+
+                <div>
+                  <div className="font-medium">{shopName || 'Your Workshop'}</div>
+                  <div className="text-xs text-muted-foreground"> {STATUS_TEXT.OFFLINE}</div>
+                  <div className="text-xs text-amber-700 font-semibold">Earnings Today: ₹{mockDashboardData.today.earnings.toFixed(2)}</div>
+                </div>
+                <Button size="sm" onClick={() => setIsOnline(true)} className="bg-green-600 hover:bg-green-700">
+                  Go Online
+                </Button>
+                </div>
+
+                <div className="grid my-5">
+                  {/* <Button variant="secondary" size="sm" onClick={simulateNewOrder}>+ Simulate Order</Button> */}
+                  {/* NEW: Button to trigger the details sheet */}
+                  <Sheet open={detailsSheetOpen} onOpenChange={setDetailsSheetOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="default" size="sm">View Details</Button>
+                    </SheetTrigger>
+                    <SheetContent side="bottom" className="max-h-[92vh] p-0 bg-gray-50 border-t rounded-t-2xl">
+                      <ScrollArea className="h-[88vh]">
+                        <div className="p-4">
+                          <PartnerDashboard data={mockDashboardData} />
+                        </div>
+                      </ScrollArea>
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
