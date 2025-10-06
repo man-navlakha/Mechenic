@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import Navbar from "../mechanic/componets/Navbar";
 import RightPanel from "./componets/RightPanel";
 import api from "@/utils/api";
+import { useWebSocket } from '@/context/WebSocketContext'; 
 
 export default function Dashboard() {
   const mapRef = useRef(null);
+  const { isOnline, setIsOnline, isVerified } = useWebSocket();
   const markersRef = useRef([]);
   const [map, setMap] = useState(null);
   const [mechanicPosition, setMechanicPosition] = useState(null);
-  const [isOnline, setIsOnline] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
   const [basicNeeds, setBasicNeeds] = useState(null);
   const [mapStatus, setMapStatus] = useState("loading");
   const [locationStatus, setLocationStatus] = useState("getting");
@@ -491,8 +491,8 @@ export default function Dashboard() {
       <Navbar
         mechanicName={basicNeeds ? `${basicNeeds.first_name} ${basicNeeds.last_name}` : "Loading..."}
         shopName={basicNeeds?.shop_name}
+        // These props are now for display in Navbar, not for StatusSwitch
         isOnline={isOnline}
-        setIsOnline={setIsOnline}
         isVerified={isVerified}
       />
 
@@ -566,12 +566,12 @@ export default function Dashboard() {
         )}
 
 
-        <RightPanel
+         <RightPanel
           shopName={basicNeeds?.shop_name}
+          // Pass the state down to RightPanel
           isOnline={isOnline}
           setIsOnline={setIsOnline}
           isVerified={isVerified}
-          initialStatus={isOnline ? "ONLINE" : "OFFLINE"} // Add this
         />
       </div>
     </div>

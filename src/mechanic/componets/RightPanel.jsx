@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import StatusSwitch from './StatusSwitch';
+import { useWebSocket } from '@/context/WebSocketContext';
 
 // Mocked Dashboard Data
 const mockDashboardData = {
@@ -36,10 +37,11 @@ const mockDashboardData = {
 // --- Reusable UI components below ---
 // (No changes unless you're requesting optimization or splitting)
 
-const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, initialStatus }) => {
+const RightPanel = ({ shopName }) => {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+   const { isOnline } = useWebSocket();
 
   const shouldShowDashboard = !currentOrder && !isSearching;
 
@@ -122,11 +124,7 @@ const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, initialStatus
             {/* Header: Shop Info & Online Status */}
             <div className="sticky top-0 p-3 bg-white/70 rounded-xl shadow-sm mb-4">
               <div className="font-medium text-sm mb-1">{shopName || 'Your Workshop'}</div>
-              <StatusSwitch
-                isOnline={isOnline} // Pass current online status
-                setIsOnline={setIsOnline}
-                isVerified={isVerified}
-              />
+               <StatusSwitch />
             </div>
 
             {/* Searching Indicator + Sim Button */}
@@ -182,11 +180,7 @@ const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, initialStatus
                     <span>Online</span>
                   </div>
                 </div>
-                <StatusSwitch
-                  isOnline={isOnline} // Pass current online status
-                  setIsOnline={setIsOnline}
-                  isVerified={isVerified}
-                />
+                  <StatusSwitch />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="secondary" size="sm" onClick={simulateNewOrder}>
