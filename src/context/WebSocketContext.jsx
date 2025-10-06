@@ -10,18 +10,22 @@ export const WebSocketProvider = ({ children }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [basicNeeds, setBasicNeeds] = useState(null); // 👈 State to hold user data
   const reconnectAttempts = useRef(0);
 
-  // Fetch initial mechanic status when the app loads
+  // Fetch initial mechanic status and data when the app loads
   useEffect(() => {
     const fetchInitialStatus = async () => {
       try {
         const res = await api.get("/jobs/GetBasicNeeds/");
         const data = res.data.basic_needs || {};
-        setIsOnline(data.status === "ONLINE" && !!data.is_verified);
+        setBasicNeeds(data); // 👈 Store all basic needs data
         setIsVerified(!!data.is_verified);
+        // Only set online if also verified
+        setIsOnline(data.status === "ONLINE" && !!data.is_verified);
       } catch (error) {
         console.warn("Failed to fetch initial status:", error);
+        // User is likely not authenticated, which is a normal state on the login page.
       }
     };
     fetchInitialStatus();
@@ -35,7 +39,6 @@ export const WebSocketProvider = ({ children }) => {
       disconnectWebSocket();
     }
 
-    // Cleanup function to close socket when the provider unmounts
     return () => {
       disconnectWebSocket();
     };
@@ -43,7 +46,6 @@ export const WebSocketProvider = ({ children }) => {
 
   const connectWebSocket = async () => {
     if (socket && socket.readyState === WebSocket.OPEN) {
-      console.log("[WS] Already connected.");
       return;
     }
     
@@ -53,20 +55,14 @@ export const WebSocketProvider = ({ children }) => {
       const wsToken = res.data.ws_token;
       if (!wsToken) throw new Error("Failed to get WebSocket token");
 
-      // --- FIX STARTS HERE ---
-      // Use wss in production, ws in development.
       const isProduction = import.meta.env.PROD;
       const wsScheme = isProduction ? "wss" : "ws";
-      
-      // In development, connect to the Vite proxy. In production, connect to the backend host.
       const backendHost = isProduction
         ? (import.meta.env.VITE_BACKEND_HOST || 'mechanic-setu.onrender.com').replace(/^(https?:\/\/)/, '')
         : window.location.host;
 
       const wsUrl = `${wsScheme}://${backendHost}/ws/job_notifications/?token=${wsToken}`;
-      // --- FIX ENDS HERE ---
-
-      console.log("[WS] Connecting to:", wsUrl);
+      
       const newSocket = new WebSocket(wsUrl);
 
       newSocket.onopen = () => {
@@ -77,9 +73,9 @@ export const WebSocketProvider = ({ children }) => {
       };
 
       newSocket.onmessage = (event) => {
-        console.log("[WS] Message:", event.data);
         try {
             const data = JSON.parse(event.data);
+            console.log("[WS] Message:", data);
             window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data }));
         } catch (e) {
             console.error("Error parsing WS message", e);
@@ -90,7 +86,6 @@ export const WebSocketProvider = ({ children }) => {
         console.log("[WS] Disconnected");
         setSocket(null);
         setConnectionStatus('disconnected');
-        // Optional: Implement a reconnect strategy
       };
 
       newSocket.onerror = (error) => {
@@ -106,19 +101,18 @@ export const WebSocketProvider = ({ children }) => {
 
   const disconnectWebSocket = () => {
     if (socket) {
-      console.log("[WS] Closing connection.");
       socket.close(1000, "User initiated disconnect");
-      setSocket(null);
-      setConnectionStatus('disconnected');
     }
   };
 
+  // The value provided by the context
   const value = {
     socket,
     connectionStatus,
     isOnline,
     setIsOnline,
     isVerified,
+    basicNeeds, // 👈 Expose the basicNeeds data
   };
 
   return (

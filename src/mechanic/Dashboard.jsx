@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import Navbar from "../mechanic/componets/Navbar";
 import RightPanel from "./componets/RightPanel";
-import api from "@/utils/api";
 import { useWebSocket } from '@/context/WebSocketContext'; 
 
 export default function Dashboard() {
-  const mapRef = useRef(null);
-  const { isOnline, setIsOnline, isVerified } = useWebSocket();
+ const mapRef = useRef(null);
+  const { isOnline, isVerified, basicNeeds } = useWebSocket();
   const markersRef = useRef([]);
   const [map, setMap] = useState(null);
   const [mechanicPosition, setMechanicPosition] = useState(null);
-  const [basicNeeds, setBasicNeeds] = useState(null);
   const [mapStatus, setMapStatus] = useState("loading");
   const [locationStatus, setLocationStatus] = useState("getting");
   const [lastLocationUpdate, setLastLocationUpdate] = useState(null);
@@ -24,21 +22,6 @@ export default function Dashboard() {
     retryCount: 0
   });
 
-  // Fetch basic_needs
-  useEffect(() => {
-    const fetchBasicNeeds = async () => {
-      try {
-        const res = await api.get("/jobs/GetBasicNeeds/");
-        const data = res.data.basic_needs || {};
-        setBasicNeeds(data);
-        setIsOnline(data.status === "ONLINE" && data.is_verified);
-        setIsVerified(!!data.is_verified);
-      } catch (error) {
-        console.warn("Failed to fetch basic needs:", error);
-      }
-    };
-    fetchBasicNeeds();
-  }, []);
 
   // Check location permissions and capabilities
   useEffect(() => {
@@ -491,7 +474,6 @@ export default function Dashboard() {
       <Navbar
         mechanicName={basicNeeds ? `${basicNeeds.first_name} ${basicNeeds.last_name}` : "Loading..."}
         shopName={basicNeeds?.shop_name}
-        // These props are now for display in Navbar, not for StatusSwitch
         isOnline={isOnline}
         isVerified={isVerified}
       />
@@ -566,12 +548,8 @@ export default function Dashboard() {
         )}
 
 
-         <RightPanel
+          <RightPanel
           shopName={basicNeeds?.shop_name}
-          // Pass the state down to RightPanel
-          isOnline={isOnline}
-          setIsOnline={setIsOnline}
-          isVerified={isVerified}
         />
       </div>
     </div>
