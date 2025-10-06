@@ -79,14 +79,14 @@ export default function Dashboard() {
       setLocationStatus("success");
       setLastLocationUpdate(new Date());
       setShowLocationPrompt(false);
-      
+
       // Update mechanic marker if map is already initialized
       updateMechanicMarker(newPosition);
     };
 
     const errorCallback = (error) => {
       console.error("Geolocation error:", error.message);
-      
+
       switch (error.code) {
         case error.PERMISSION_DENIED:
           setLocationStatus("permission_denied");
@@ -105,7 +105,7 @@ export default function Dashboard() {
           setShowLocationPrompt(true);
           break;
       }
-      
+
       // Fallback to default position only if we don't have any position
       if (!mechanicPosition) {
         setMechanicPosition({ lat: 23.0225, lng: 72.5714 });
@@ -197,11 +197,11 @@ export default function Dashboard() {
     const R = 6371000; // Earth's radius in meters
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
@@ -238,7 +238,7 @@ export default function Dashboard() {
   const getDeviceInstructions = () => {
     const isiPhone = /iPhone|iPad|iPod/.test(navigator.userAgent);
     const isAndroid = /Android/.test(navigator.userAgent);
-    
+
     if (isiPhone) {
       return "On iPhone: Go to Settings > Privacy & Security > Location Services > Your Browser, and select 'While Using the App'";
     } else if (isAndroid) {
@@ -288,7 +288,7 @@ export default function Dashboard() {
 
       try {
         console.log("Creating Mappls map instance with position:", mechanicPosition);
-        
+
         // Create map with current mechanic position
         const mapInstance = new window.mappls.Map("map", {
           center: mechanicPosition,
@@ -337,7 +337,7 @@ export default function Dashboard() {
       initStateRef.current.initializing = false;
       setMap(mapInstance);
       setMapStatus("loaded");
-      
+
       addMechanicMarker(mapInstance);
     };
 
@@ -352,7 +352,7 @@ export default function Dashboard() {
       script.src = "https://apis.mappls.com/advancedmaps/api/a645f44a39090467aa143b8da31f6dbd/map_sdk?layer=vector&v=3.0";
       script.async = true;
       script.defer = true;
-      
+
       script.onload = () => {
         console.log("Mappls SDK loaded successfully");
         initStateRef.current.sdkLoaded = true;
@@ -360,14 +360,14 @@ export default function Dashboard() {
           setTimeout(initializeMap, 100);
         }
       };
-      
+
       script.onerror = () => {
         console.error("Failed to load Mappls SDK");
         if (isMounted) {
           setMapStatus("error");
         }
       };
-      
+
       document.head.appendChild(script);
     };
 
@@ -384,7 +384,7 @@ export default function Dashboard() {
 
   const addMechanicMarker = (mapInstance) => {
     if (!mechanicPosition) return;
-    
+
     try {
       const marker = new window.mappls.Marker({
         map: mapInstance,
@@ -411,7 +411,7 @@ export default function Dashboard() {
 
   const cleanupMap = () => {
     console.log("Cleaning up map resources...");
-    
+
     // Clear markers
     markersRef.current.forEach(marker => {
       try {
@@ -498,14 +498,14 @@ export default function Dashboard() {
 
       <div className="relative flex-grow">
         <div id="map" className="h-full w-full z-0" />
-        
+
         {/* Map status indicator */}
         {mapStatus === "loading" && (
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
             {locationStatus === "getting" ? "Getting your location..." : "Loading map..."}
           </div>
         )}
-        
+
         {mapStatus === "error" && (
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             Failed to load map. Please refresh the page.
@@ -555,7 +555,7 @@ export default function Dashboard() {
           <div className="absolute top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded text-sm">
             <div className="flex items-center space-x-2">
               <span>📍 Updated: {lastLocationUpdate.toLocaleTimeString()}</span>
-              <button 
+              <button
                 onClick={refreshLocation}
                 className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors"
               >
@@ -565,11 +565,13 @@ export default function Dashboard() {
           </div>
         )}
 
+
         <RightPanel
           shopName={basicNeeds?.shop_name}
           isOnline={isOnline}
           setIsOnline={setIsOnline}
           isVerified={isVerified}
+          initialStatus={isOnline ? "ONLINE" : "OFFLINE"} // Add this
         />
       </div>
     </div>
