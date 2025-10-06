@@ -78,24 +78,24 @@ const RightPanel = ({ shopName, isOnline, setIsOnline, isVerified, initialStatus
   const handleReject = () => setCurrentOrder(null);
   const handleCall = () => window.open(`tel:${currentOrder.phone}`);
   const handleMap = () => console.log('Map open');
-const PartnerDashboard = ({ data }) => ( <div className="space-y-4"> <EarningsDashboard today={data.today} /> <PartnerStatusCard partnerStatus={data.partnerStatus} /> <JobHistory history={data.jobHistory} /> </div> );
+  const PartnerDashboard = ({ data }) => (<div className="space-y-4"> <EarningsDashboard today={data.today} /> <PartnerStatusCard partnerStatus={data.partnerStatus} /> <JobHistory history={data.jobHistory} /> </div>);
 
-const EarningsDashboard = ({ today }) => ( <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-sm"> <CardContent className="p-4"> <div className="flex items-center justify-between mb-3"> <h3 className="text-sm font-semibold text-gray-700">Today's progress</h3> <Badge variant="outline" className="bg-white/60">Today</Badge> </div> <div className="grid grid-cols-2 gap-4 mb-3"> <div className="bg-white/70 rounded-lg p-3 shadow-sm"> <div className="flex items-center gap-2 mb-1"> <TrendingUp size={16} className="text-green-600" /> <span className="text-2xl font-bold text-gray-800">{today.earnings.toFixed(2)}</span> </div> <div className="flex items-center justify-between"> <span className="text-xs text-gray-600">Earnings</span> <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button> </div> </div> <div className="bg-white/70 rounded-lg p-3 shadow-sm"> <div className="flex items-center gap-2 mb-1"> <Calendar size={16} className="text-blue-600" /> <span className="text-2xl font-bold text-gray-800">{today.trips}</span> </div> <div className="flex items-center justify-between"> <span className="text-xs text-gray-600">Trips</span> <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button> </div> </div> </div> <div className="grid grid-cols-2 gap-4"> <div className="bg-white/70 rounded-lg p-3 shadow-sm"> <div className="flex items-center gap-2 mb-1"> <Clock size={16} className="text-orange-600" /> <span className="text-lg font-bold text-gray-800">{today.timeOnOrders}</span> </div> <div className="flex items-center justify-between"> <span className="text-xs text-gray-600">Time on orders</span> <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button> </div> </div> <div className="bg-white/70 rounded-lg p-3 shadow-sm"> <div className="flex items-center gap-2 mb-1"> <Award size={16} className="text-purple-600" /> <span className="text-lg font-bold text-gray-800">{today.gigs} Gigs</span> </div> <div className="flex items-center justify-between"> <span className="text-xs text-gray-600">History</span> <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button> </div> </div> </div> </CardContent> </Card> );
+  const EarningsDashboard = ({ today }) => (<Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-sm"> <CardContent className="p-4"> <div className="flex items-center justify-between mb-3"> <h3 className="text-sm font-semibold text-gray-700">Today's progress</h3> <Badge variant="outline" className="bg-white/60">Today</Badge> </div> <div className="grid grid-cols-2 gap-4 mb-3"> <div className="bg-white/70 rounded-lg p-3 shadow-sm"> <div className="flex items-center gap-2 mb-1"> <TrendingUp size={16} className="text-green-600" /> <span className="text-2xl font-bold text-gray-800">{today.earnings.toFixed(2)}</span> </div> <div className="flex items-center justify-between"> <span className="text-xs text-gray-600">Earnings</span> <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button> </div> </div> <div className="bg-white/70 rounded-lg p-3 shadow-sm"> <div className="flex items-center gap-2 mb-1"> <Calendar size={16} className="text-blue-600" /> <span className="text-2xl font-bold text-gray-800">{today.trips}</span> </div> <div className="flex items-center justify-between"> <span className="text-xs text-gray-600">Trips</span> <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button> </div> </div> </div> <div className="grid grid-cols-2 gap-4"> <div className="bg-white/70 rounded-lg p-3 shadow-sm"> <div className="flex items-center gap-2 mb-1"> <Clock size={16} className="text-orange-600" /> <span className="text-lg font-bold text-gray-800">{today.timeOnOrders}</span> </div> <div className="flex items-center justify-between"> <span className="text-xs text-gray-600">Time on orders</span> <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button> </div> </div> <div className="bg-white/70 rounded-lg p-3 shadow-sm"> <div className="flex items-center gap-2 mb-1"> <Award size={16} className="text-purple-600" /> <span className="text-lg font-bold text-gray-800">{today.gigs} Gigs</span> </div> <div className="flex items-center justify-between"> <span className="text-xs text-gray-600">History</span> <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">→</Button> </div> </div> </div> </CardContent> </Card>);
 
-const PartnerStatusCard = ({ partnerStatus }) => ( <Card className="bg-gradient-to-br from-blue-100 to-blue-200 border-0 shadow-sm"> <CardContent className="p-4"> <div className="flex items-center justify-between mb-2"> <div className="flex items-center gap-2"> <div className="w-3 h-3 rounded-full bg-blue-600"></div> <span className="text-sm font-semibold text-blue-900">{partnerStatus.level}</span> </div> <Info size={16} className="text-blue-700" /> </div> <p className="text-xs text-blue-800 mb-2">{partnerStatus.period}</p> <p className="text-xs text-blue-700 mb-3">{partnerStatus.message}</p> <Button variant="outline" size="sm" className="w-full bg-white/50 text-blue-800 border-blue-300 text-xs"> View Performance Details </Button> </CardContent> </Card> ); const JobHistory = ({ history = [] }) => ( <Card className="mt-4"> <CardHeader className="pb-3"> <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle> </CardHeader> <CardContent className="pt-0"> {history.length > 0 ? ( <div className="space-y-2"> {history.map((job) => ( <div key={job.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-xs"> <div> <p className="font-medium">Delivery #{job.id}</p> <p className="text-muted-foreground">₹{job.earning.toFixed(2)} • {job.timestamp}</p> </div> <Badge variant={job.status === 'Completed' ? 'secondary' : 'destructive'}>{job.status}</Badge> </div> ))} </div> ) : ( <div className="text-center py-4"> <p className="text-sm text-gray-500">No recent activity to show.</p> </div> )} </CardContent> </Card> );
-const SearchingForOrders = () => (
-  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4">
-      <Search className="text-blue-500" size={32} />
+  const PartnerStatusCard = ({ partnerStatus }) => (<Card className="bg-gradient-to-br from-blue-100 to-blue-200 border-0 shadow-sm"> <CardContent className="p-4"> <div className="flex items-center justify-between mb-2"> <div className="flex items-center gap-2"> <div className="w-3 h-3 rounded-full bg-blue-600"></div> <span className="text-sm font-semibold text-blue-900">{partnerStatus.level}</span> </div> <Info size={16} className="text-blue-700" /> </div> <p className="text-xs text-blue-800 mb-2">{partnerStatus.period}</p> <p className="text-xs text-blue-700 mb-3">{partnerStatus.message}</p> <Button variant="outline" size="sm" className="w-full bg-white/50 text-blue-800 border-blue-300 text-xs"> View Performance Details </Button> </CardContent> </Card>); const JobHistory = ({ history = [] }) => (<Card className="mt-4"> <CardHeader className="pb-3"> <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle> </CardHeader> <CardContent className="pt-0"> {history.length > 0 ? (<div className="space-y-2"> {history.map((job) => (<div key={job.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-xs"> <div> <p className="font-medium">Delivery #{job.id}</p> <p className="text-muted-foreground">₹{job.earning.toFixed(2)} • {job.timestamp}</p> </div> <Badge variant={job.status === 'Completed' ? 'secondary' : 'destructive'}>{job.status}</Badge> </div>))} </div>) : (<div className="text-center py-4"> <p className="text-sm text-gray-500">No recent activity to show.</p> </div>)} </CardContent> </Card>);
+  const SearchingForOrders = () => (
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4">
+        <Search className="text-blue-500" size={32} />
+      </div>
+      <h3 className="text-lg font-semibold text-gray-700 mb-2">Searching for orders...</h3>
+      <p className="text-gray-500 mb-6">Explore your zone 😊</p>
+      <div className="w-16 h-1 bg-gradient-to-r from-blue-200 to-blue-300 rounded-full"></div>
     </div>
-    <h3 className="text-lg font-semibold text-gray-700 mb-2">Searching for orders...</h3>
-    <p className="text-gray-500 mb-6">Explore your zone 😊</p>
-    <div className="w-16 h-1 bg-gradient-to-r from-blue-200 to-blue-300 rounded-full"></div>
-  </div>
-);
+  );
 
-
-const MobileOnlineStatus = () => ( <div className="flex items-center justify-between px-2 py-1"> {/* Left Section: Status + Text */} <div className="flex items-center gap-3"> {/* Icon with Ping */} <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center"> <Search className="animate-ping absolute text-blue-500" size={20} /> <Search className="text-blue-500" size={20} /> </div> {/* Text Info */} <div className="flex flex-col"> <span className="text-sm font-medium text-gray-800">Searching for orders...</span> <span className="text-xs text-gray-500">Explore your zone 😊</span> </div> </div> {/* Right Section: Status Pulse */} <div className="flex items-center gap-2 text-blue-600 font-medium animate-pulse"> <span className="relative flex h-3 w-3"> <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span> <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span> </span> <span className="text-xs">Live</span> </div> </div> );
+  const PickupCard = ({ order, onCall, onMap, onAccept, onReject, showStatus }) => (<Card className="shadow-md rounded-xl border-0 mb-4"> {showStatus && (<div className="sticky top-0 bg-gradient-to-r from-amber-50 to-amber-100 px-4 py-2 flex items-center justify-between rounded-t-xl border-b"> <span className="text-xs font-semibold text-amber-800">{order.accepted ? 'Accepted Order' : 'New Request'}</span> <Badge variant="secondary">{order.pickupDistance}</Badge> </div>)} <CardHeader className="px-4 pb-2 pt-4"> <div className="flex items-start gap-3"> <div className="w-10 h-10 rounded-md bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center"> <MapPin className="text-amber-700" size={20} /> </div> <div className="flex-1"> <CardTitle className="text-sm font-semibold mb-0">{order.placeName}</CardTitle> <p className="text-xs text-muted-foreground mt-1">{order.address}</p> </div> </div> </CardHeader> <CardContent className="px-4 pt-2 pb-4"> <div className="flex items-center justify-between mb-3"> <div> <p className="text-xs text-muted-foreground">Expected earnings</p> <p className="text-lg font-bold">₹{order.payout}</p> </div> <div className="text-right"> <p className="text-xs text-muted-foreground">Drop Distance</p> <p className="font-medium">{order.dropDistance}</p> </div> </div> <Separator /> <div className="grid grid-cols-2 gap-2 mt-3"> <Button variant="outline" className="flex items-center gap-2 justify-center py-2" onClick={onCall}><Phone size={16} />Call</Button> <Button variant="ghost" className="flex items-center gap-2 justify-center py-2" onClick={onMap}><Map size={16} />Map</Button> </div> <div className="flex gap-2 mt-3"> <Button variant="destructive" className="flex-1 py-2" onClick={onReject}><XCircle size={16} />Reject</Button> <Button className="flex-1 py-2" onClick={onAccept}><CheckCircle size={16} />Accept</Button> </div> </CardContent> </Card>);
+  const MobileOnlineStatus = () => (<div className="flex items-center justify-between px-2 py-1"> {/* Left Section: Status + Text */} <div className="flex items-center gap-3"> {/* Icon with Ping */} <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center"> <Search className="animate-ping absolute text-blue-500" size={20} /> <Search className="text-blue-500" size={20} /> </div> {/* Text Info */} <div className="flex flex-col"> <span className="text-sm font-medium text-gray-800">Searching for orders...</span> <span className="text-xs text-gray-500">Explore your zone 😊</span> </div> </div> {/* Right Section: Status Pulse */} <div className="flex items-center gap-2 text-blue-600 font-medium animate-pulse"> <span className="relative flex h-3 w-3"> <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span> <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span> </span> <span className="text-xs">Live</span> </div> </div>);
   // Render content based on order status
   const renderDesktopContent = () => {
     if (currentOrder) {
@@ -116,13 +116,13 @@ const MobileOnlineStatus = () => ( <div className="flex items-center justify-bet
   return (
     <>
       {/* Desktop View */}
-      <div className="hidden sm:flex fixed right-4 top-9 bottom-4 w-96 bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/40 overflow-y-scroll flex-col">
+      <div className="hidden sm:flex fixed right-4 top-19 bottom-4 w-96 bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/40 overflow-y-scroll flex-col">
         <ScrollArea className="flex-1">
           <div className="p-4">
             {/* Header: Shop Info & Online Status */}
-            <div className="p-3 bg-white/70 rounded-xl shadow-sm mb-4">
+            <div className="sticky top-0 p-3 bg-white/70 rounded-xl shadow-sm mb-4">
               <div className="font-medium text-sm mb-1">{shopName || 'Your Workshop'}</div>
-               <StatusSwitch
+              <StatusSwitch
                 isOnline={isOnline} // Pass current online status
                 setIsOnline={setIsOnline}
                 isVerified={isVerified}
@@ -152,7 +152,7 @@ const MobileOnlineStatus = () => ( <div className="flex items-center justify-bet
       {/* Mobile View */}
       <div className="sm:hidden">
         {currentOrder ? (
-          <Sheet open={true} onOpenChange={() => {}}>
+          <Sheet open={true} onOpenChange={() => { }}>
             <SheetContent side="bottom" className="max-h-[92vh] p-0 bg-white/80 backdrop-blur-xl border-t rounded-t-2xl">
               <div className="p-4">
                 <PickupCard
@@ -183,10 +183,10 @@ const MobileOnlineStatus = () => ( <div className="flex items-center justify-bet
                   </div>
                 </div>
                 <StatusSwitch
-                isOnline={isOnline} // Pass current online status
-                setIsOnline={setIsOnline}
-                isVerified={isVerified}
-              />
+                  isOnline={isOnline} // Pass current online status
+                  setIsOnline={setIsOnline}
+                  isVerified={isVerified}
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="secondary" size="sm" onClick={simulateNewOrder}>

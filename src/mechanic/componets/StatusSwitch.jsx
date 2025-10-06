@@ -15,7 +15,7 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
   const getWebSocketConfig = () => {
     // Use environment variables or fallback to localhost for development
     const backendHost = import.meta.env.VITE_BACKEND_HOST || 'https://mechanic-setu.onrender.com';
-    
+
     return {
       backendHost: backendHost,
       reconnectDelay: 3000,
@@ -32,7 +32,7 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
 
     try {
       setConnectionStatus('connecting');
-      
+
       const res = await api.get("core/ws-token/", {
         withCredentials: true,
       });
@@ -47,7 +47,12 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
 
       const config = getWebSocketConfig();
       const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-      const wsUrl = `${wsScheme}://${config.backendHost}/ws/job_notifications/${wsToken}`;
+      
+      // Clean the backend host to prevent URL malformation
+      const cleanBackendHost = config.backendHost.replace(/^(https?:\/\/)/, '');
+      
+      // FIX: Append the token as a query parameter to match the backend route
+      const wsUrl = `${wsScheme}://${cleanBackendHost}/ws/job_notifications/?token=${wsToken}`;
 
       console.log("[WS CONNECT]: ", wsUrl);
 
@@ -74,7 +79,7 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
         console.log("[WS] Disconnected:", event.code, event.reason);
         setSocket(null);
         setConnectionStatus('disconnected');
-        
+
         // Only attempt reconnect for unexpected closures and if still online
         if (isOnline && event.code !== 1000) {
           reconnectAttempts.current += 1;
@@ -91,7 +96,7 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
     } catch (error) {
       console.error("[WS] Failed to establish connection:", error);
       setConnectionStatus('error');
-      
+
       // Retry connection after delay
       if (isOnline) {
         reconnectAttempts.current += 1;
@@ -127,19 +132,16 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
     }
   };
 
-  const showNewJobNotification = (job) => {
-    // You can use your preferred notification method
+ const showNewJobNotification = (job) => {
     if (Notification.permission === "granted") {
       new Notification("New Job Available", {
-        body: `New job: ${job.service_type} - ${job.payout}`,
+        body: `New job: ${job.service_type || 'Service Request'}`,
         icon: "/mechanic-icon.png"
       });
     }
     
-    // Trigger custom event that other components can listen to
     window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: job }));
   };
-
   // WebSocket connection management
   useEffect(() => {
     if (isOnline && isVerified) {
@@ -153,6 +155,37 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
     };
   }, [isOnline, isVerified]);
 
+  // Send location updates
+  useEffect(() => {
+    let locationInterval;
+
+    if (isOnline && socket) {
+      locationInterval = setInterval(() => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            socket.send(
+              JSON.stringify({
+                type: "location_update",
+                latitude,
+                longitude,
+              })
+            );
+          },
+          (error) => {
+            console.error("Error getting location:", error);
+          }
+        );
+      }, 1000); // Send location every 1 second
+    }
+
+    return () => {
+      if (locationInterval) {
+        clearInterval(locationInterval);
+      }
+    };
+  }, [isOnline, socket]);
+
   const toggleStatus = async (checked) => {
     // Prevent toggle if not verified
     if (!isVerified) {
@@ -163,20 +196,20 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
     setLoading(true);
 
     try {
-      const response = await api.put("/jobs/UpdateMechanicStatus/", { 
-        status: checked ? "ONLINE" : "OFFLINE" 
+      const response = await api.put("/jobs/UpdateMechanicStatus/", {
+        status: checked ? "ONLINE" : "OFFLINE"
       });
-      
+
       // Update parent state - this will trigger WebSocket connection/disconnection
       setIsOnline(checked);
-      
+
       console.log("Status updated successfully:", response.data);
-      
+
     } catch (error) {
       // Don't update state on error - parent state remains unchanged
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          "Failed to update status. Please try again.";
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        "Failed to update status. Please try again.";
       alert(errorMessage);
       console.error("Status update error:", error);
     } finally {
@@ -225,14 +258,14 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
         disabled={!isVerified || loading}
         className={!isVerified ? "opacity-50 cursor-not-allowed" : ""}
       />
-      
+
       <div className="flex items-center space-x-2">
         <Label className={`text-sm font-medium ${
           isOnline ? "text-green-600" : "text-gray-600"
         }`}>
           {isOnline ? "Online" : "Offline"}
         </Label>
-        
+
         {isOnline && (
           <div className="flex items-center space-x-1 text-xs">
             {getConnectionStatusIcon()}
@@ -246,11 +279,11 @@ export default function StatusSwitch({ initialStatus, setIsOnline, isVerified, i
             </span>
           </div>
         )}
-        
+
         {loading && (
           <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
         )}
-        
+
         {!isVerified && (
           <span className="text-red-500 text-xs font-medium">
             (Verification required)
