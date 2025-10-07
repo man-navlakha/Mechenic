@@ -11,6 +11,8 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
+import { isValidPhoneNumber } from 'react-phone-number-input';
+
 
 import {
   User, MapPin, Phone, Mail, Navigation, Building,

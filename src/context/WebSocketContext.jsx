@@ -75,7 +75,7 @@ export const WebSocketProvider = ({ children }) => {
     }
 
     const handleNewJob = (event) => {
-        setJob(event.detail);
+      setJob(event.detail);
     };
 
     window.addEventListener('visibilitychange', handleVisibilityChange);
@@ -118,35 +118,42 @@ export const WebSocketProvider = ({ children }) => {
       const wsUrl = `${wsScheme}://${backendHost}/ws/job_notifications/?token=${wsToken}`;
       const newSocket = new WebSocket(wsUrl);
 
+      // src/context/WebSocketContext.jsx
+
+      // Inside the connectWebSocket function
       newSocket.onopen = () => {
-        console.log("[WS] Connected");
+        console.log("%c[WS] Connection successful!", "color: #4CAF50; font-weight: bold;");
         setSocket(newSocket);
         setConnectionStatus('connected');
-        reconnectAttempts.current = 0;
       };
 
       newSocket.onmessage = (event) => {
-  try {
-    const data = JSON.parse(event.data);
-    console.log("[WS] Message:", data);
-    // This line is the critical point.
-    // It expects the data to look like: { "job": { ...job details... } }
-    // window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data.job }));
-    // TO THIS:
-window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data }));
-  } catch (e) {
-    console.error("Error parsing WS message", e);
-  }
-};
+        try {
+          const data = JSON.parse(event.data);
+          // Log the raw data from the server
+          console.log("%c[WS] Message Received:", "color: #2196F3; font-weight: bold;", data);
 
-      newSocket.onclose = () => {
-        console.log("[WS] Disconnected");
+          // Check if the received data has the 'job' key
+          if (data.job) {
+            console.log("[WS] 'job' key found. Dispatching 'newJobAvailable' event.");
+            window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data.job }));
+          } else {
+            console.warn("[WS] Received message, but it's missing the 'job' key.", data);
+          }
+
+        } catch (e) {
+          console.error("[WS] Error parsing message:", e);
+        }
+      };
+
+      newSocket.onclose = (event) => {
+        console.warn(`[WS] Disconnected. Code: ${event.code}, Reason: ${event.reason}`);
         setSocket(null);
         setConnectionStatus('disconnected');
       };
 
       newSocket.onerror = (error) => {
-        console.error("[WS] Error:", error);
+        console.error("[WS] An error occurred:", error);
         setConnectionStatus('error');
       };
 
@@ -170,12 +177,12 @@ window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data }));
 
   const handleAcceptJob = () => {
     if (socket && job && basicNeeds) {
-        socket.send(JSON.stringify({
-          type: 'accept_job',
-          service_request_id: job.id,
-          mechanic_user_id: basicNeeds.user_id, // Ensure user_id is in basicNeeds
-        }));
-      }
+      socket.send(JSON.stringify({
+        type: 'accept_job',
+        service_request_id: job.id,
+        mechanic_user_id: basicNeeds.user_id, // Ensure user_id is in basicNeeds
+      }));
+    }
     setJob(null); // Close the popup
   };
 
