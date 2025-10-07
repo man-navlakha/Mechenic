@@ -130,22 +130,19 @@ export const WebSocketProvider = ({ children }) => {
       newSocket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          // Log the raw data from the server
-          console.log("%c[WS] Message Received:", "color: #2196F3; font-weight: bold;", data);
+          console.log("[WS] Message Received:", data);
 
-          // Check if the received data has the 'job' key
-          if (data.job) {
-            console.log("[WS] 'job' key found. Dispatching 'newJobAvailable' event.");
-            window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data.job }));
-          } else {
-            console.warn("[WS] Received message, but it's missing the 'job' key.", data);
+          // MODIFIED: Check for the new, explicit type from the consumer
+          if (data.type === 'new_job' && data.service_request) {
+            console.log("New job received, dispatching event:", data.service_request);
+            // The event detail is now in data.service_request
+            window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data.service_request }));
           }
 
         } catch (e) {
-          console.error("[WS] Error parsing message:", e);
+          console.error("Error parsing WS message", e);
         }
       };
-
       newSocket.onclose = (event) => {
         console.warn(`[WS] Disconnected. Code: ${event.code}, Reason: ${event.reason}`);
         setSocket(null);
