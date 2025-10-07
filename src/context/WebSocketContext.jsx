@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '@/utils/api';
+import JobNotificationPopup from '@/components/JobNotificationPopup'; // Import the new component
 
 const WebSocketContext = createContext(null);
 
@@ -11,11 +12,10 @@ export const WebSocketProvider = ({ children }) => {
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [basicNeeds, setBasicNeeds] = useState(null);
+  const [job, setJob] = useState(null); // State for the job notification
   const reconnectAttempts = useRef(0);
-  // A ref to track the intended online state, separate from the actual connection
   const intendedOnlineState = useRef(false);
 
-  // Function to update the mechanic's status on the backend
   const updateStatus = (status) => {
     try {
       if (status === 'OFFLINE') {
@@ -25,7 +25,7 @@ export const WebSocketProvider = ({ children }) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ status: 'OFFLINE' }),
-          keepalive: true, // <--- this is key!
+          keepalive: true,
         });
       } else {
         api.put("/jobs/UpdateMechanicStatus/", { status });
@@ -34,7 +34,6 @@ export const WebSocketProvider = ({ children }) => {
       console.error("Failed to update status:", error);
     }
   };
-
 
   const fetchInitialStatus = async () => {
     try {
@@ -50,19 +49,16 @@ export const WebSocketProvider = ({ children }) => {
     }
   };
 
-  // Fetch initial status on mount
   useEffect(() => {
     fetchInitialStatus();
   }, []);
 
-  // Effect to manage page lifecycle events
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && intendedOnlineState.current) {
         updateStatus('OFFLINE');
       } else if (document.visibilityState === 'visible' && intendedOnlineState.current) {
-        // When tab becomes visible again, reconnect if the user intended to be online
-        setIsOnline(true);
+        handleSetIsOnline(true);
       }
     };
 
@@ -72,21 +68,23 @@ export const WebSocketProvider = ({ children }) => {
       }
     };
 
-    // This handles the user navigating back to the page
     const handlePageShow = (event) => {
       if (event.persisted) {
-        // Re-fetch status if the page was loaded from cache (e.g., back button)
         fetchInitialStatus();
       }
     }
 
+    const handleNewJob = (event) => {
+        setJob(event.detail);
+    };
+
+
     window.addEventListener('visibilitychange', handleVisibilityChange);
-    // 'pagehide' is more reliable than 'beforeunload' for this purpose
     window.addEventListener('pagehide', handlePageHide);
     window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('newJobAvailable', handleNewJob);
 
 
-    // WebSocket connection logic
     if (isOnline && isVerified) {
       connectWebSocket();
     } else {
@@ -97,6 +95,7 @@ export const WebSocketProvider = ({ children }) => {
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('newJobAvailable', handleNewJob);
       disconnectWebSocket();
     };
   }, [isOnline, isVerified]);
@@ -134,7 +133,7 @@ export const WebSocketProvider = ({ children }) => {
         try {
           const data = JSON.parse(event.data);
           console.log("[WS] Message:", data);
-          window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data }));
+          window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data.job }));
         } catch (e) {
           console.error("Error parsing WS message", e);
         }
@@ -163,11 +162,22 @@ export const WebSocketProvider = ({ children }) => {
     }
   };
 
-  // This function will be called from the StatusSwitch component
   const handleSetIsOnline = (newIsOnline) => {
     intendedOnlineState.current = newIsOnline;
     setIsOnline(newIsOnline);
     updateStatus(newIsOnline ? 'ONLINE' : 'OFFLINE');
+  };
+
+  const handleAcceptJob = () => {
+    // Logic to accept the job
+    console.log('Accepted job:', job);
+    setJob(null);
+  };
+
+  const handleRejectJob = () => {
+    // Logic to reject the job
+    console.log('Rejected job:', job);
+    setJob(null);
   };
 
 
@@ -175,7 +185,7 @@ export const WebSocketProvider = ({ children }) => {
     socket,
     connectionStatus,
     isOnline,
-    setIsOnline: handleSetIsOnline, // Expose the new handler
+    setIsOnline: handleSetIsOnline,
     isVerified,
     basicNeeds,
   };
@@ -183,6 +193,11 @@ export const WebSocketProvider = ({ children }) => {
   return (
     <WebSocketContext.Provider value={value}>
       {children}
+      <JobNotificationPopup
+        job={job}
+        onAccept={handleAcceptJob}
+        onReject={handleRejectJob}
+      />
     </WebSocketContext.Provider>
   );
 };
