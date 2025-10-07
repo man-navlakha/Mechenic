@@ -18,10 +18,8 @@ export default function StatusSwitch() {
 
     setLoading(true);
     try {
-      await api.put("/jobs/UpdateMechanicStatus/", {
-        status: checked ? "ONLINE" : "OFFLINE"
-      });
-      setIsOnline(checked); // 👈 This will trigger the context to connect/disconnect
+      // The context will now handle the API call
+      setIsOnline(checked);
     } catch (error) {
       const errorMessage = error.response?.data?.message || "Failed to update status.";
       alert(errorMessage);
