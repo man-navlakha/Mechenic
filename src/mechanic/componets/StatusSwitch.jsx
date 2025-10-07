@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { useWebSocket } from '@/context/WebSocketContext'; // 👈 Import the hook
+import { useWebSocket } from '@/context/WebSocketContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
-import api from "@/utils/api";
 
 export default function StatusSwitch() {
   // 👇 Get state and functions from the context
@@ -28,7 +27,7 @@ export default function StatusSwitch() {
     }
   };
 
-    const getConnectionStatusIcon = () => {
+  const getConnectionStatusIcon = () => {
     switch (connectionStatus) {
       case 'connected':
         return <Wifi className="h-3 w-3 text-green-500" />;
@@ -56,35 +55,45 @@ export default function StatusSwitch() {
 
 
   return (
-    <div className="flex items-center space-x-2">
-      <Switch
-        checked={isOnline}
-        onCheckedChange={toggleStatus}
-        disabled={!isVerified || loading}
-        className={!isVerified ? "opacity-50 cursor-not-allowed" : ""}
-      />
-      <div className="flex items-center space-x-2">
-         <Label className={`text-sm font-medium ${
-          isOnline ? "text-green-600" : "text-gray-600"
-        }`}>
-          {isOnline ? "Online" : "Offline"}
-        </Label>
-        {isOnline && (
-          <div className="flex items-center space-x-1 text-xs">
-            {getConnectionStatusIcon()}
-            <span className={`
+
+    isVerified ?
+      !loading ?
+        <div className="flex items-center text-sm  space-x-2">
+          <Switch
+            checked={isOnline}
+            onCheckedChange={toggleStatus}
+            disabled={!isVerified || loading}
+            className={!isVerified ? "opacity-50 cursor-not-allowed" : ""}
+          />
+          <div className="flex  items-start space-x-2">
+
+
+            <div className={` font-medium ${isOnline ? "text-green-600" : "text-gray-600"}`}>
+              {isOnline ? "Online" : "Offline"}
+            </div>
+
+
+            {isOnline && (
+              <div className="flex items-center space-x-1 ">
+                {getConnectionStatusIcon()}
+                <span className={`
               ${connectionStatus === 'connected' ? 'text-green-500' : ''}
               ${connectionStatus === 'connecting' ? 'text-yellow-500' : ''}
               ${connectionStatus === 'error' ? 'text-red-500' : ''}
               ${connectionStatus === 'disconnected' ? 'text-gray-500' : ''}
             `}>
-              {getConnectionStatusText()}
-            </span>
+                  {getConnectionStatusText()}
+                </span>
+              </div>
+            )}
+
           </div>
-        )}
-        {loading && <Loader2 className="h-4 w-4 animate-spin text-gray-500" />}
-        {!isVerified && <span className="text-red-500 text-xs font-medium">(Verification required)</span>}
-      </div>
-    </div>
+        </div>
+        :
+        <div class="w-10 h-10 border-4 border-t-blue-500 border-gray-300 rounded-full animate-spin"></div>
+      :
+      <span className="text-red-500 text-xs font-medium">(Verification required)</span>
   );
+
+
 }

@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 import StatusSwitch from './StatusSwitch';
 import { useWebSocket } from '@/context/WebSocketContext';
+import JobNotificationPopup from '@/components/JobNotificationPopup';
 
 // Mocked Dashboard Data
 const mockDashboardData = {
@@ -312,6 +313,9 @@ const RightPanel = ({ shopName }) => {
                     <SearchingForOrders />
                   </CardContent>
                 </Card>
+
+                <JobNotificationPopup />
+
               </>
             )}
 
@@ -326,8 +330,8 @@ const RightPanel = ({ shopName }) => {
         {currentOrder ? (
           <div className="fixed inset-0 z-50 bg-black/20">
             <Sheet open={true} onOpenChange={() => setCurrentOrder(null)}>
-              <SheetContent 
-                side="bottom" 
+              <SheetContent
+                side="bottom"
                 className="max-h-[92vh] p-0 bg-white border-t rounded-t-2xl"
                 onInteractOutside={(e) => e.preventDefault()}
               >
@@ -346,12 +350,17 @@ const RightPanel = ({ shopName }) => {
           </div>
         ) : (
           <div className="fixed inset-x-4 bottom-4 z-40">
+            {isOnline &&
+              <div className="sticky top-0 p-3 bg-white/90 rounded-xl shadow-sm mb-2 z-10">
+                <MobileOnlineStatus />
+              </div>
+            }
             <div className="bg-white/90 backdrop-blur-lg rounded-xl p-3 shadow-lg border border-gray-200 flex flex-col gap-3">
-              {isOnline && <MobileOnlineStatus />}
-               <div className="sticky top-0 p-3 bg-white/70 rounded-xl shadow-sm mb-4 z-10">
-              <div className="font-medium text-sm mb-1">{shopName || 'Your Workshop'}</div>
-              <StatusSwitch />
-            </div>
+
+
+              <div className="flex justify-between items-center font-medium text-xl mb-1">{shopName || 'Your Workshop'}  <StatusSwitch /></div>
+
+
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="secondary" size="sm" onClick={simulateNewOrder}>
                   + Simulate Order
@@ -376,6 +385,7 @@ const RightPanel = ({ shopName }) => {
                 </Sheet>
               </div>
             </div>
+
           </div>
         )}
       </div>
