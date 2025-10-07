@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '@/utils/api';
-import JobNotificationPopup from '@/components/JobNotificationPopup'; // Import the new component
+import JobNotificationPopup from '@/components/JobNotificationPopup';
 
 const WebSocketContext = createContext(null);
 
@@ -12,7 +12,7 @@ export const WebSocketProvider = ({ children }) => {
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [basicNeeds, setBasicNeeds] = useState(null);
-  const [job, setJob] = useState(null); // State for the job notification
+  const [job, setJob] = useState(null);
   const reconnectAttempts = useRef(0);
   const intendedOnlineState = useRef(false);
 
@@ -62,7 +62,7 @@ export const WebSocketProvider = ({ children }) => {
       }
     };
 
-    const handlePageHide = (event) => {
+    const handlePageHide = () => {
       if (intendedOnlineState.current) {
         updateStatus('OFFLINE');
       }
@@ -78,12 +78,10 @@ export const WebSocketProvider = ({ children }) => {
         setJob(event.detail);
     };
 
-
     window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pagehide', handlePageHide);
     window.addEventListener('pageshow', handlePageShow);
     window.addEventListener('newJobAvailable', handleNewJob);
-
 
     if (isOnline && isVerified) {
       connectWebSocket();
@@ -99,7 +97,6 @@ export const WebSocketProvider = ({ children }) => {
       disconnectWebSocket();
     };
   }, [isOnline, isVerified]);
-
 
   const connectWebSocket = async () => {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -119,7 +116,6 @@ export const WebSocketProvider = ({ children }) => {
         : window.location.host;
 
       const wsUrl = `${wsScheme}://${backendHost}/ws/job_notifications/?token=${wsToken}`;
-
       const newSocket = new WebSocket(wsUrl);
 
       newSocket.onopen = () => {
@@ -130,14 +126,18 @@ export const WebSocketProvider = ({ children }) => {
       };
 
       newSocket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log("[WS] Message:", data);
-          window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data.job }));
-        } catch (e) {
-          console.error("Error parsing WS message", e);
-        }
-      };
+  try {
+    const data = JSON.parse(event.data);
+    console.log("[WS] Message:", data);
+    // This line is the critical point.
+    // It expects the data to look like: { "job": { ...job details... } }
+    // window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data.job }));
+    // TO THIS:
+window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data }));
+  } catch (e) {
+    console.error("Error parsing WS message", e);
+  }
+};
 
       newSocket.onclose = () => {
         console.log("[WS] Disconnected");
@@ -169,17 +169,21 @@ export const WebSocketProvider = ({ children }) => {
   };
 
   const handleAcceptJob = () => {
-    // Logic to accept the job
-    console.log('Accepted job:', job);
-    setJob(null);
+    if (socket && job && basicNeeds) {
+        socket.send(JSON.stringify({
+          type: 'accept_job',
+          service_request_id: job.id,
+          mechanic_user_id: basicNeeds.user_id, // Ensure user_id is in basicNeeds
+        }));
+      }
+    setJob(null); // Close the popup
   };
 
   const handleRejectJob = () => {
-    // Logic to reject the job
+    // Just close the popup for now
     console.log('Rejected job:', job);
     setJob(null);
   };
-
 
   const value = {
     socket,
