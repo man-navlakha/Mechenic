@@ -10,29 +10,83 @@ export const WebSocketProvider = ({ children }) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const [basicNeeds, setBasicNeeds] = useState(null); // 👈 State to hold user data
+  const [basicNeeds, setBasicNeeds] = useState(null);
   const reconnectAttempts = useRef(0);
+  // A ref to track the intended online state, separate from the actual connection
+  const intendedOnlineState = useRef(false);
 
-  // Fetch initial mechanic status and data when the app loads
-  useEffect(() => {
-    const fetchInitialStatus = async () => {
-      try {
-        const res = await api.get("/jobs/GetBasicNeeds/");
-        const data = res.data.basic_needs || {};
-        setBasicNeeds(data); // 👈 Store all basic needs data
-        setIsVerified(!!data.is_verified);
-        // Only set online if also verified
-        setIsOnline(data.status === "ONLINE" && !!data.is_verified);
-      } catch (error) {
-        console.warn("Failed to fetch initial status:", error);
-        // User is likely not authenticated, which is a normal state on the login page.
+  // Function to update the mechanic's status on the backend
+  const updateStatus = (status) => {
+    try {
+      if (status === 'OFFLINE') {
+        fetch('/api/jobs/UpdateMechanicStatus/', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'OFFLINE' }),
+          keepalive: true, // <--- this is key!
+        });
+      } else {
+        api.put("/jobs/UpdateMechanicStatus/", { status });
       }
-    };
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
+  };
+
+
+  const fetchInitialStatus = async () => {
+    try {
+      const res = await api.get("/jobs/GetBasicNeeds/");
+      const data = res.data.basic_needs || {};
+      setBasicNeeds(data);
+      setIsVerified(!!data.is_verified);
+      const serverIsOnline = data.status === "ONLINE" && !!data.is_verified;
+      setIsOnline(serverIsOnline);
+      intendedOnlineState.current = serverIsOnline;
+    } catch (error) {
+      console.warn("Failed to fetch initial status:", error);
+    }
+  };
+
+  // Fetch initial status on mount
+  useEffect(() => {
     fetchInitialStatus();
   }, []);
 
-  // Manage WebSocket connection based on online status
+  // Effect to manage page lifecycle events
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && intendedOnlineState.current) {
+        updateStatus('OFFLINE');
+      } else if (document.visibilityState === 'visible' && intendedOnlineState.current) {
+        // When tab becomes visible again, reconnect if the user intended to be online
+        setIsOnline(true);
+      }
+    };
+
+    const handlePageHide = (event) => {
+      if (intendedOnlineState.current) {
+        updateStatus('OFFLINE');
+      }
+    };
+
+    // This handles the user navigating back to the page
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        // Re-fetch status if the page was loaded from cache (e.g., back button)
+        fetchInitialStatus();
+      }
+    }
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    // 'pagehide' is more reliable than 'beforeunload' for this purpose
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('pageshow', handlePageShow);
+
+
+    // WebSocket connection logic
     if (isOnline && isVerified) {
       connectWebSocket();
     } else {
@@ -40,15 +94,19 @@ export const WebSocketProvider = ({ children }) => {
     }
 
     return () => {
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
       disconnectWebSocket();
     };
   }, [isOnline, isVerified]);
+
 
   const connectWebSocket = async () => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       return;
     }
-    
+
     setConnectionStatus('connecting');
     try {
       const res = await api.get("core/ws-token/", { withCredentials: true });
@@ -62,7 +120,7 @@ export const WebSocketProvider = ({ children }) => {
         : window.location.host;
 
       const wsUrl = `${wsScheme}://${backendHost}/ws/job_notifications/?token=${wsToken}`;
-      
+
       const newSocket = new WebSocket(wsUrl);
 
       newSocket.onopen = () => {
@@ -74,11 +132,11 @@ export const WebSocketProvider = ({ children }) => {
 
       newSocket.onmessage = (event) => {
         try {
-            const data = JSON.parse(event.data);
-            console.log("[WS] Message:", data);
-            window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data }));
+          const data = JSON.parse(event.data);
+          console.log("[WS] Message:", data);
+          window.dispatchEvent(new CustomEvent('newJobAvailable', { detail: data }));
         } catch (e) {
-            console.error("Error parsing WS message", e);
+          console.error("Error parsing WS message", e);
         }
       };
 
@@ -105,14 +163,21 @@ export const WebSocketProvider = ({ children }) => {
     }
   };
 
-  // The value provided by the context
+  // This function will be called from the StatusSwitch component
+  const handleSetIsOnline = (newIsOnline) => {
+    intendedOnlineState.current = newIsOnline;
+    setIsOnline(newIsOnline);
+    updateStatus(newIsOnline ? 'ONLINE' : 'OFFLINE');
+  };
+
+
   const value = {
     socket,
     connectionStatus,
     isOnline,
-    setIsOnline,
+    setIsOnline: handleSetIsOnline, // Expose the new handler
     isVerified,
-    basicNeeds, // 👈 Expose the basicNeeds data
+    basicNeeds,
   };
 
   return (
