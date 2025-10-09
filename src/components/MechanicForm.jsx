@@ -248,18 +248,7 @@ submissionData.append('profile_pic', formData.profile_pic); // file or captured 
                 </TabsContent>
               </Tabs>
 
-              {/* Preview selected/captured image */}
-              {formData.profile_pic && (
-                <img
-                  src={
-                    formData.profile_pic instanceof File
-                      ? URL.createObjectURL(formData.profile_pic)
-                      : formData.profile_pic
-                  }
-                  alt="Preview"
-                  className="w-24 h-24 mt-2 object-cover rounded-md border"
-                />
-              )}
+           
             </div>
 
 
