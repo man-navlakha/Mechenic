@@ -305,7 +305,7 @@ export const WebSocketProvider = ({ children }) => {
       
       {/* Debug panel */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-2 right-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
+        <div className="fixed top-2 left-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
           <div><strong>WebSocket Debug</strong></div>
           <div>Status: <span className={
             connectionStatus === 'connected' ? 'text-green-400' : 
