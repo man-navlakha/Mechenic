@@ -160,12 +160,12 @@ const JobNotificationPopup = ({ job, onAccept, onReject }) => {
             {/* Vehicle Type */}
             <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
               <div className="p-2 bg-blue-100 rounded-lg">
-                {getVehicleIcon(job.vehicle_type)}
+                {getVehicleIcon(job.vehical_type)}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">Vehicle Type</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {job.vehicle_type || 'Not specified'}
+                  {job.vehical_type || 'Not specified'}
                 </p>
               </div>
             </div>
