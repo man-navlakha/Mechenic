@@ -8,6 +8,7 @@ export const useWebSocket = () => useContext(WebSocketContext);
 
 export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
+  const [jobSocket, setJobSocket] = useState(null); // New state for the job-specific socket
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -191,6 +192,65 @@ export const WebSocketProvider = ({ children }) => {
     setConnectionStatus('disconnected');
   };
 
+  const connectToJobRoom = async (serviceId) => {
+    if (jobSocket && (jobSocket.readyState === WebSocket.OPEN || jobSocket.readyState === WebSocket.CONNECTING)) {
+      console.log("Job WebSocket already exists with state:", jobSocket.readyState);
+      return;
+    }
+
+    console.log("Connecting to job room...");
+
+    try {
+      const res = await api.get("core/ws-token/", { withCredentials: true });
+      const wsToken = res.data.ws_token;
+
+      if (!wsToken) {
+        throw new Error("Failed to get WebSocket token");
+      }
+
+      const isProduction = import.meta.env.PROD;
+      const wsScheme = isProduction ? "wss" : "ws";
+      let backendHost;
+      if (isProduction) {
+        backendHost = import.meta.env.VITE_BACKEND_HOST || 'mechanic-setu.onrender.com';
+        backendHost = backendHost.replace(/^(https?:\/\/)/, '');
+      } else {
+        backendHost = window.location.host;
+      }
+
+      const wsUrl = `${wsScheme}://${backendHost}/ws/job/?token=${wsToken}&service_id=${serviceId}`;
+      console.log("Job WebSocket URL:", wsUrl);
+
+      const newJobSocket = new WebSocket(wsUrl);
+
+      newJobSocket.onopen = () => {
+        console.log("%c[JOB-WS] Connection successful!", "color: #007BFF; font-weight: bold;");
+        setJobSocket(newJobSocket);
+        // You can add more state updates here if needed
+      };
+
+      newJobSocket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("[JOB-WS] Message received:", data);
+        // Handle messages from the job room (e.g., chat, location updates)
+      };
+
+      newJobSocket.onclose = (event) => {
+        console.warn(`[JOB-WS] Disconnected. Code: ${event.code}, Reason: ${event.reason}`);
+        setJobSocket(null);
+      };
+
+      newJobSocket.onerror = (error) => {
+        console.error("[JOB-WS] WebSocket error:", error);
+      };
+
+    } catch (error) {
+      console.error("[JOB-WS] Connection setup failed:", error);
+    }
+  };
+
+
+
   const handleSetIsOnline = (newIsOnline) => {
     console.log("Setting online state to:", newIsOnline);
     intendedOnlineState.current = newIsOnline;
@@ -256,26 +316,35 @@ export const WebSocketProvider = ({ children }) => {
     };
   }, [isOnline, isVerified]);
 
-  const handleAcceptJob = () => {
-    console.log("Accepting job:", job);
-    if (socket && socket.readyState === WebSocket.OPEN && job && basicNeeds) {
-      const acceptMessage = {
-        type: 'accept_job',
-        service_request_id: job.id,
-        mechanic_user_id: basicNeeds.user_id,
-      };
-      console.log("Sending accept message:", acceptMessage);
-      socket.send(JSON.stringify(acceptMessage));
-    } else {
-      console.warn("Cannot accept job - missing requirements:", {
-        socket: !!socket,
-        socketReady: socket ? socket.readyState : 'no socket',
-        job: !!job,
-        basicNeeds: !!basicNeeds,
-        userId: basicNeeds?.user_id
-      });
+  // Modified handleAcceptJob function
+  const handleAcceptJob = async () => {
+    if (!job) {
+      console.warn("No job to accept.");
+      return;
     }
-    setJob(null);
+
+    console.log("Accepting job:", job);
+    try {
+      // Step 1: Call the API to accept the service request
+      await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
+      console.log("Job accepted via API.");
+
+      // Step 2: Disconnect from the general notification socket
+      disconnectWebSocket();
+      console.log("Disconnected from general notifications.");
+
+
+      // Step 3: Connect to the private job room socket
+      connectToJobRoom(job.id);
+      console.log("Connecting to job-specific room.");
+
+
+    } catch (error) {
+      console.error("Failed to accept job:", error);
+      // Handle the error (e.g., show a notification to the user)
+    }
+
+    setJob(null); // Clear the job notification
   };
 
   const handleRejectJob = () => {
@@ -285,18 +354,15 @@ export const WebSocketProvider = ({ children }) => {
 
   const value = {
     socket,
+    jobSocket, // Expose the new socket
     connectionStatus,
     isOnline,
     setIsOnline: handleSetIsOnline,
     isVerified,
     basicNeeds,
-    // Add methods for manual testing
     connectWebSocket,
     disconnectWebSocket,
-    simulateNewJob: (testJob) => {
-      console.log("Simulating new job:", testJob);
-      setJob(testJob);
-    }
+    connectToJobRoom, // Expose the new function
   };
 
   return (
