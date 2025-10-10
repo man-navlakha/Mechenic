@@ -133,7 +133,7 @@ function App() {
     <LockProvider>
       <WebSocketProvider>
 
-      <AppContent />
+        <AppContent />
       </WebSocketProvider>
     </LockProvider>
   );

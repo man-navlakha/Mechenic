@@ -15,11 +15,11 @@ const PIN_STORAGE_KEY = 'app_lock_pin';
 
 const LockScreen = () => {
   const { unlockScreen } = useLock();
-  
+
   // State for the current mode: 'unlock', 'setup_enter', or 'setup_confirm'
-  const [mode, setMode] = useState('unlock'); 
+  const [mode, setMode] = useState('unlock');
   const [correctPin, setCorrectPin] = useState('');
-  
+
   // State for the PIN input
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -41,7 +41,7 @@ const LockScreen = () => {
       setMode('setup_enter');
     }
   }, []);
-  
+
   // Function to handle number inputs
   const handleNumberClick = useCallback((num) => {
     setError('');
@@ -79,7 +79,7 @@ const LockScreen = () => {
       setPin('');
       setMode('setup_confirm');
     }
-    
+
     if (mode === 'setup_confirm') {
       if (pin === firstPin) {
         localStorage.setItem(PIN_STORAGE_KEY, pin);
@@ -129,31 +129,31 @@ const LockScreen = () => {
     setFirstPin('');
     setError('');
   };
-  
+
   // Dynamic UI Text based on the current mode
   const getUIText = () => {
     switch (mode) {
       case 'setup_enter':
-        return { 
-          title: 'Set Up Your PIN', 
+        return {
+          title: 'Set Up Your PIN',
           subtitle: 'Create a 4-digit PIN to secure your screen',
           icon: <KeyRound className="h-8 w-8" />
         };
       case 'setup_confirm':
-        return { 
-          title: 'Confirm Your PIN', 
+        return {
+          title: 'Confirm Your PIN',
           subtitle: 'Re-enter your 4-digit PIN to confirm',
           icon: <Shield className="h-8 w-8" />
         };
       default:
-        return { 
-          title: 'Screen Locked', 
+        return {
+          title: 'Screen Locked',
           subtitle: 'Enter your 4-digit PIN to continue',
           icon: <Lock className="h-8 w-8" />
         };
     }
   };
-  
+
   const { title, subtitle, icon } = getUIText();
 
   const PinDots = () => (
@@ -161,11 +161,10 @@ const LockScreen = () => {
       {[...Array(4)].map((_, i) => (
         <div
           key={i}
-          className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
-            pin.length > i 
-              ? 'bg-primary border-primary' 
+          className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${pin.length > i
+              ? 'bg-primary border-primary'
               : 'bg-muted border-border'
-          } ${error ? 'animate-pulse border-destructive' : ''}`}
+            } ${error ? 'animate-pulse border-destructive' : ''}`}
         />
       ))}
     </div>
@@ -173,7 +172,7 @@ const LockScreen = () => {
 
   const NumberPad = () => {
     const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    
+
     return (
       <div className="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
         {numbers.map((num) => (
@@ -187,7 +186,7 @@ const LockScreen = () => {
             {num}
           </Button>
         ))}
-        
+
         <Button
           variant="ghost"
           onClick={handleForgotPin}
@@ -195,7 +194,7 @@ const LockScreen = () => {
         >
           Forgot PIN
         </Button>
-        
+
         <Button
           variant="outline"
           size="lg"
@@ -204,7 +203,7 @@ const LockScreen = () => {
         >
           0
         </Button>
-        
+
         <Button
           variant="outline"
           size="lg"
@@ -291,9 +290,9 @@ const LockScreen = () => {
 
           {/* Additional Actions */}
           <div className="flex justify-center space-x-4 pt-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={unlockScreen}
               className="text-xs text-muted-foreground"
             >

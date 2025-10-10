@@ -20,9 +20,9 @@ export default function LegalPages() {
 
       <main className="container max-w-4xl mx-auto px-6 py-16">
         <h1 className="text-4xl md:text-5xl font-normal mb-12">Legal Information</h1>
-        
+
         <div className="grid gap-4">
-          <Card 
+          <Card
             className="cursor-pointer hover:bg-accent transition-colors"
             onClick={() => setCurrentPage('terms')}
           >
@@ -44,7 +44,7 @@ export default function LegalPages() {
             </CardHeader>
           </Card>
 
-          <Card 
+          <Card
             className="cursor-pointer hover:bg-accent transition-colors"
             onClick={() => setCurrentPage('privacy')}
           >
@@ -221,7 +221,7 @@ export default function LegalPages() {
           <Separator className="my-8" />
 
           <h2 className="text-2xl font-normal mt-12 mb-4">1. Information We Collect</h2>
-          
+
           <h3 className="text-xl font-medium mt-6 mb-3">User Information</h3>
           <p className="text-foreground/90 leading-relaxed">
             We collect your name, phone number, location data, service history, and preferences to provide you with efficient roadside assistance.

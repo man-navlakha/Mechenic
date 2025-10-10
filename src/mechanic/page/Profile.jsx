@@ -78,7 +78,7 @@ const Profile = () => {
               <p className="text-xs md:text-sm text-muted-foreground">Manage your account settings</p>
             </div>
           </div>
-          
+
           {/* Mobile Menu Button */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -87,8 +87,8 @@ const Profile = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
-              <MobileNavigation 
-                activeSection={activeSection} 
+              <MobileNavigation
+                activeSection={activeSection}
                 onSectionChange={handleSectionChange}
               />
             </SheetContent>
@@ -188,28 +188,28 @@ const HomeOverview = () => (
 
     {/* Quick Action Cards */}
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-      <QuickActionCard 
-        icon={<User className="text-blue-600" size={18} />} 
-        title="Personal Info" 
-        description="Update your details" 
+      <QuickActionCard
+        icon={<User className="text-blue-600" size={18} />}
+        title="Personal Info"
+        description="Update your details"
         progress={85}
       />
-      <QuickActionCard 
-        icon={<Shield className="text-green-600" size={18} />} 
-        title="Security" 
-        description="Manage password & 2FA" 
+      <QuickActionCard
+        icon={<Shield className="text-green-600" size={18} />}
+        title="Security"
+        description="Manage password & 2FA"
         progress={100}
       />
-      <QuickActionCard 
-        icon={<DollarSign className="text-yellow-600" size={18} />} 
-        title="Earnings" 
-        description="View payments & statements" 
+      <QuickActionCard
+        icon={<DollarSign className="text-yellow-600" size={18} />}
+        title="Earnings"
+        description="View payments & statements"
         progress={60}
       />
-      <QuickActionCard 
-        icon={<History className="text-purple-600" size={18} />} 
-        title="Job History" 
-        description="Review past work" 
+      <QuickActionCard
+        icon={<History className="text-purple-600" size={18} />}
+        title="Job History"
+        description="Review past work"
         progress={45}
       />
     </div>
@@ -327,7 +327,7 @@ const Security = () => (
           Change <ChevronRight size={16} className="ml-1" />
         </Button>
       </div>
-      
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 md:p-4 border rounded-lg gap-3 sm:gap-0">
         <div className="flex-1">
           <h4 className="font-semibold text-sm md:text-base">Two-Factor Authentication</h4>
@@ -343,7 +343,7 @@ const Security = () => (
           </Button>
         </div>
       </div>
-      
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 md:p-4 border rounded-lg gap-3 sm:gap-0">
         <div className="flex-1">
           <h4 className="font-semibold text-sm md:text-base">Recent Activity Log</h4>
@@ -374,7 +374,7 @@ const PrivacyData = () => (
           Download
         </Button>
       </div>
-      
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 md:p-4 border rounded-lg gap-3 sm:gap-0">
         <div className="flex-1">
           <h4 className="font-semibold text-sm md:text-base">Marketing Communications</h4>
@@ -416,7 +416,7 @@ const Earnings = () => (
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
         <Button className="w-full sm:w-auto">View Detailed Statements</Button>
         <Button variant="outline" className="w-full sm:w-auto">Payout History</Button>
@@ -501,7 +501,7 @@ const Notifications = () => (
         </div>
         <Switch defaultChecked />
       </div>
-      
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 md:p-4 border rounded-lg gap-3 sm:gap-0">
         <div className="flex-1">
           <h4 className="font-semibold text-sm md:text-base">Payment Confirmations</h4>

@@ -44,13 +44,13 @@ export const WebSocketProvider = ({ children }) => {
       const res = await api.get("/jobs/GetBasicNeeds/");
       const data = res.data.basic_needs || {};
       console.log("Basic needs data:", data);
-      
+
       setBasicNeeds(data);
       setIsVerified(!!data.is_verified);
-      
+
       const serverIsOnline = data.status === "ONLINE" && !!data.is_verified;
       console.log("Server online status:", serverIsOnline);
-      
+
       setIsOnline(serverIsOnline);
       intendedOnlineState.current = serverIsOnline;
     } catch (error) {
@@ -72,19 +72,19 @@ export const WebSocketProvider = ({ children }) => {
 
     console.log("Starting WebSocket connection...");
     setConnectionStatus('connecting');
-    
+
     try {
       const res = await api.get("core/ws-token/", { withCredentials: true });
       const wsToken = res.data.ws_token;
       console.log("WebSocket token received:", wsToken ? "Yes" : "No");
-      
+
       if (!wsToken) {
         throw new Error("Failed to get WebSocket token");
       }
 
       const isProduction = import.meta.env.PROD;
       const wsScheme = isProduction ? "wss" : "ws";
-      
+
       let backendHost;
       if (isProduction) {
         backendHost = import.meta.env.VITE_BACKEND_HOST || 'mechanic-setu.onrender.com';
@@ -117,11 +117,11 @@ export const WebSocketProvider = ({ children }) => {
           if (data.type === 'new_job') {
             console.log("New job detected - full data:", data);
             console.log("Service request data:", data.service_request);
-            
+
             if (data.service_request) {
               console.log("Dispatching newJobAvailable event with detail:", data.service_request);
-              window.dispatchEvent(new CustomEvent('newJobAvailable', { 
-                detail: data.service_request 
+              window.dispatchEvent(new CustomEvent('newJobAvailable', {
+                detail: data.service_request
               }));
             } else {
               console.warn("New job type but no service_request in data");
@@ -140,13 +140,13 @@ export const WebSocketProvider = ({ children }) => {
         console.log("WebSocket close event:", event);
         setSocket(null);
         setConnectionStatus('disconnected');
-        
+
         // Reconnection logic
         if (reconnectAttempts.current < maxReconnectAttempts && intendedOnlineState.current) {
           reconnectAttempts.current += 1;
           const delay = Math.min(3000 * reconnectAttempts.current, 30000);
           console.log(`Attempting reconnect ${reconnectAttempts.current}/${maxReconnectAttempts} in ${delay}ms`);
-          
+
           setTimeout(() => {
             if (intendedOnlineState.current) {
               connectWebSocket();
@@ -166,13 +166,13 @@ export const WebSocketProvider = ({ children }) => {
     } catch (error) {
       console.error("[WS] Connection setup failed:", error);
       setConnectionStatus('error');
-      
+
       // Retry connection on setup failure
       if (reconnectAttempts.current < maxReconnectAttempts) {
         reconnectAttempts.current += 1;
         const delay = 3000 * reconnectAttempts.current;
         console.log(`Retrying connection setup ${reconnectAttempts.current}/${maxReconnectAttempts} in ${delay}ms`);
-        
+
         setTimeout(() => {
           if (intendedOnlineState.current) {
             connectWebSocket();
@@ -205,7 +205,7 @@ export const WebSocketProvider = ({ children }) => {
 
   useEffect(() => {
     console.log("WebSocket Effect - isOnline:", isOnline, "isVerified:", isVerified);
-    
+
     const handleVisibilityChange = () => {
       console.log("Visibility changed:", document.visibilityState);
       if (document.visibilityState === 'hidden' && intendedOnlineState.current) {
@@ -302,21 +302,21 @@ export const WebSocketProvider = ({ children }) => {
   return (
     <WebSocketContext.Provider value={value}>
       {children}
-      
+
       {/* Debug panel */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-2 left-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
           <div><strong>WebSocket Debug</strong></div>
           <div>Status: <span className={
-            connectionStatus === 'connected' ? 'text-green-400' : 
-            connectionStatus === 'connecting' ? 'text-yellow-400' : 'text-red-400'
+            connectionStatus === 'connected' ? 'text-green-400' :
+              connectionStatus === 'connecting' ? 'text-yellow-400' : 'text-red-400'
           }>{connectionStatus}</span></div>
           <div>Online: <span className={isOnline ? 'text-green-400' : 'text-red-400'}>{isOnline.toString()}</span></div>
           <div>Verified: <span className={isVerified ? 'text-green-400' : 'text-red-400'}>{isVerified.toString()}</span></div>
           <div>Socket: {socket ? <span className="text-green-400">Connected ({socket.readyState})</span> : <span className="text-red-400">No Socket</span>}</div>
           <div>Current Job: {job ? <span className="text-green-400">Yes</span> : <span className="text-red-400">No</span>}</div>
           <div>Reconnect: {reconnectAttempts.current}/{maxReconnectAttempts}</div>
-          <button 
+          <button
             onClick={() => {
               console.log("Full state:", {
                 connectionStatus,
@@ -334,7 +334,7 @@ export const WebSocketProvider = ({ children }) => {
           </button>
         </div>
       )}
-      
+
       <JobNotificationPopup
         job={job}
         onAccept={handleAcceptJob}

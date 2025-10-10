@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { MapPin, Wrench, Car, Clock, X, ChevronsRight, Check ,Bike, Truck } from 'lucide-react';
+import { MapPin, Wrench, Car, Clock, X, ChevronsRight, Check, Bike, Truck } from 'lucide-react';
 
 
 const getVehicleIcon = (type) => {
@@ -30,7 +30,7 @@ const SwipeToAcceptButton = ({ onAccept }) => {
     setIsDragging(true);
     const clientX = e.type === 'touchstart' ? e.touches[0].pageX : e.pageX;
     if (sliderRef.current) {
-        startXRef.current = clientX - sliderRef.current.getBoundingClientRect().left;
+      startXRef.current = clientX - sliderRef.current.getBoundingClientRect().left;
     }
     document.body.classList.add('no-select');
   }, [isSuccess]);
@@ -39,12 +39,12 @@ const SwipeToAcceptButton = ({ onAccept }) => {
     if (!isDragging || isSuccess) return;
     const clientX = e.type === 'touchmove' ? e.touches[0].pageX : e.pageX;
     if (containerRef.current && sliderRef.current) {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const sliderWidth = sliderRef.current.offsetWidth;
-        let newLeft = clientX - containerRect.left - startXRef.current;
-        const maxLeft = containerRect.width - sliderWidth;
-        newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-        setSliderLeft(newLeft);
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const sliderWidth = sliderRef.current.offsetWidth;
+      let newLeft = clientX - containerRect.left - startXRef.current;
+      const maxLeft = containerRect.width - sliderWidth;
+      newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+      setSliderLeft(newLeft);
     }
   }, [isDragging, isSuccess]);
 
@@ -54,17 +54,17 @@ const SwipeToAcceptButton = ({ onAccept }) => {
     document.body.classList.remove('no-select');
 
     if (containerRef.current && sliderRef.current) {
-        const containerWidth = containerRef.current.offsetWidth;
-        const sliderWidth = sliderRef.current.offsetWidth;
-        const threshold = (containerWidth - sliderWidth) * 0.85;
+      const containerWidth = containerRef.current.offsetWidth;
+      const sliderWidth = sliderRef.current.offsetWidth;
+      const threshold = (containerWidth - sliderWidth) * 0.85;
 
-        if (sliderLeft >= threshold) {
-            setSliderLeft(containerWidth - sliderWidth);
-            setIsSuccess(true);
-            setTimeout(() => onAccept(), 300);
-        } else {
-            setSliderLeft(0);
-        }
+      if (sliderLeft >= threshold) {
+        setSliderLeft(containerWidth - sliderWidth);
+        setIsSuccess(true);
+        setTimeout(() => onAccept(), 300);
+      } else {
+        setSliderLeft(0);
+      }
     }
   }, [isDragging, sliderLeft, onAccept]);
 
@@ -158,17 +158,17 @@ const JobNotificationPopup = ({ job, onAccept, onReject }) => {
           {/* Content */}
           <div className="p-6 space-y-4">
             {/* Vehicle Type */}
-           <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-  <div className="p-2 bg-blue-100 rounded-lg">
-    {getVehicleIcon(job.vehicle_type)}
-  </div>
-  <div className="flex-1">
-    <p className="text-sm font-medium text-gray-600">Vehicle Type</p>
-    <p className="text-lg font-semibold text-gray-900">
-      {job.vehicle_type || 'Not specified'}
-    </p>
-  </div>
-</div>
+            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                {getVehicleIcon(job.vehicle_type)}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600">Vehicle Type</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {job.vehicle_type || 'Not specified'}
+                </p>
+              </div>
+            </div>
 
             {/* Problem Description */}
             <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg border border-amber-100">

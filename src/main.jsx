@@ -9,10 +9,10 @@ const GOOGLE_CLIENT_ID = "628591285290-agf9c8nrjbcfa9onq3tr7d6dubjjo0g9.apps.goo
 
 createRoot(document.getElementById('root')).render(
 
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </GoogleOAuthProvider>
+  <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </GoogleOAuthProvider>
 
 )

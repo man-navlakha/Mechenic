@@ -54,8 +54,8 @@ export default function MechanicVerification() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [isVerifying, setIsVerifying] = useState(false);
-const [isRejecting, setIsRejecting] = useState(false);
-const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
 
   const fetchMechanicDetails = async () => {

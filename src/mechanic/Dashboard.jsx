@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import Navbar from "../mechanic/componets/Navbar";
 import RightPanel from "./componets/RightPanel";
-import { useWebSocket } from '@/context/WebSocketContext'; 
+import { useWebSocket } from '@/context/WebSocketContext';
 
 export default function Dashboard() {
- const mapRef = useRef(null);
+  const mapRef = useRef(null);
   const { isOnline, isVerified, basicNeeds } = useWebSocket();
   const markersRef = useRef([]);
   const [map, setMap] = useState(null);
@@ -548,7 +548,7 @@ export default function Dashboard() {
         )}
 
 
-          <RightPanel
+        <RightPanel
           shopName={basicNeeds?.shop_name}
         />
       </div>

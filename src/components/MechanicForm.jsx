@@ -166,16 +166,16 @@ const MechanicForm = () => {
 
     try {
       const submissionData = new FormData();
-submissionData.append('first_name', formData.first_name);
-submissionData.append('last_name', formData.last_name);
-submissionData.append('adhar_card', formData.adhar_card);
-submissionData.append('email', formData.email);
-submissionData.append('mobile_number', formData.mobile_number);
-submissionData.append('shop_name', formData.shop_name);
-submissionData.append('shop_address', formData.shop_address);
-submissionData.append('shop_latitude', formData.shop_latitude || '');
-submissionData.append('shop_longitude', formData.shop_longitude || '');
-submissionData.append('profile_pic', formData.profile_pic); // file or captured blob
+      submissionData.append('first_name', formData.first_name);
+      submissionData.append('last_name', formData.last_name);
+      submissionData.append('adhar_card', formData.adhar_card);
+      submissionData.append('email', formData.email);
+      submissionData.append('mobile_number', formData.mobile_number);
+      submissionData.append('shop_name', formData.shop_name);
+      submissionData.append('shop_address', formData.shop_address);
+      submissionData.append('shop_latitude', formData.shop_latitude || '');
+      submissionData.append('shop_longitude', formData.shop_longitude || '');
+      submissionData.append('profile_pic', formData.profile_pic); // file or captured blob
 
 
       await api.post('/users/SetMechanicDetail/', submissionData, {
@@ -248,7 +248,7 @@ submissionData.append('profile_pic', formData.profile_pic); // file or captured 
                 </TabsContent>
               </Tabs>
 
-           
+
             </div>
 
 
@@ -322,24 +322,24 @@ submissionData.append('profile_pic', formData.profile_pic); // file or captured 
             </div>
             <div className="space-y-2">
               <Label htmlFor="shop_name" className="flex items-center gap-2">
-                 <MapPin className="h-5 w-5 text-primary" />
-                          Shop Location *
+                <MapPin className="h-5 w-5 text-primary" />
+                Shop Location *
               </Label>
-            
 
-            <PlacePickerGujarat
-              value={{
-                address: formData.shop_address,
-                latitude: formData.shop_latitude,
-                longitude: formData.shop_longitude
-              }}
-              onChange={({ address, latitude, longitude }) => {
-                handleInputChange('shop_address', address);
-                handleInputChange('shop_latitude', latitude);
-                handleInputChange('shop_longitude', longitude);
-              }}
-            />
-            
+
+              <PlacePickerGujarat
+                value={{
+                  address: formData.shop_address,
+                  latitude: formData.shop_latitude,
+                  longitude: formData.shop_longitude
+                }}
+                onChange={({ address, latitude, longitude }) => {
+                  handleInputChange('shop_address', address);
+                  handleInputChange('shop_latitude', latitude);
+                  handleInputChange('shop_longitude', longitude);
+                }}
+              />
+
             </div>
 
             <div className="space-y-2">
