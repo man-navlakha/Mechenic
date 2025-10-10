@@ -17,6 +17,7 @@ export const WebSocketProvider = ({ children }) => {
   const reconnectAttempts = useRef(0);
   const intendedOnlineState = useRef(false);
   const maxReconnectAttempts = 5;
+  const locationInterval = useRef(null);
 
   const updateStatus = async (status) => {
     try {
@@ -102,12 +103,41 @@ export const WebSocketProvider = ({ children }) => {
       const newSocket = new WebSocket(wsUrl);
 
       newSocket.onopen = () => {
-        console.log("%c[WS] Connection successful!", "color: #4CAF50; font-weight: bold;");
-        console.log("WebSocket readyState:", newSocket.readyState);
-        setSocket(newSocket);
-        setConnectionStatus('connected');
-        reconnectAttempts.current = 0;
+      console.log("%c[WS] Connection successful!", "color: #4CAF50; font-weight: bold;");
+      setSocket(newSocket);
+      setConnectionStatus('connected');
+      reconnectAttempts.current = 0;
+
+      // --- START: Location Sending Logic ---
+      if (locationInterval.current) {
+        clearInterval(locationInterval.current);
+      }
+
+      // Send location immediately on connect, then every 1 minute
+      const sendLocation = () => {
+        if (newSocket.readyState === WebSocket.OPEN) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              console.log(`[Location] Sending update: lat=${latitude}, lon=${longitude}`);
+              newSocket.send(JSON.stringify({
+                type: 'location_update',
+                latitude,
+                longitude,
+              }));
+            },
+            (error) => {
+              console.error("[Location] Error getting position:", error.message);
+            },
+            { enableHighAccuracy: true }
+          );
+        }
       };
+
+      sendLocation(); // Send once immediately
+      locationInterval.current = setInterval(sendLocation, 60000); // And then every 60 seconds
+      // --- END: Location Sending Logic ---
+    };
 
       newSocket.onmessage = (event) => {
         try {
