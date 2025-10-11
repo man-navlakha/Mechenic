@@ -15,7 +15,7 @@ import StatusSwitch from './StatusSwitch';
 import { useWebSocket } from '@/context/WebSocketContext';
 import JobNotificationPopup from '@/components/JobNotificationPopup';
 
-// Mocked Dashboard Data
+// Mocked Dashboard Data (assuming this is for demonstration)
 const mockDashboardData = {
   today: {
     earnings: 634.64,
@@ -207,7 +207,8 @@ const PickupCard = ({ order, onCall, onMap, onAccept, onReject, showStatus }) =>
   </Card>
 );
 
-const MobileOnlineStatus = () => (
+// FIXED: The component now correctly accepts `basicNeeds` as a prop.
+const MobileOnlineStatus = ({ basicNeeds }) => (
   <div className="flex items-center justify-between px-2 py-1">
     <div className="flex items-center gap-3">
       <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center relative">
@@ -215,7 +216,8 @@ const MobileOnlineStatus = () => (
         <Search className="text-blue-500" size={20} />
       </div>
       <div className="flex flex-col">
-        <span className="text-sm font-medium text-gray-800">Searching for orders...</span>
+        {/* FIXED: It can now safely access the passed-in prop. */}
+        <span className="text-sm font-medium text-gray-800">Hi, {basicNeeds?.first_name || 'Partner'}! Searching...</span>
         <span className="text-xs text-gray-500">Explore your zone 😊</span>
       </div>
     </div>
@@ -233,7 +235,7 @@ const RightPanel = ({ shopName }) => {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const { isOnline } = useWebSocket();
+  const { isOnline, basicNeeds } = useWebSocket(); // Removed unused variables
 
   const shouldShowDashboard = !currentOrder && !isSearching;
 
@@ -249,24 +251,6 @@ const RightPanel = ({ shopName }) => {
     return () => clearTimeout(timer);
   }, [isOnline, currentOrder]);
 
-  // Order Handlers
-  const simulateNewOrder = () => {
-    if (!isOnline) return;
-    setIsSearching(true);
-    setTimeout(() => {
-      setIsSearching(false);
-      setCurrentOrder({
-        id: 'job_9999',
-        placeName: "Test Restaurant",
-        address: '123 Test Street',
-        payout: 72.5,
-        pickupDistance: '1.2 km',
-        dropDistance: '3.4 km',
-        phone: '+91-90000-00000',
-        accepted: false,
-      });
-    }, 1500);
-  };
 
   const handleAccept = () => setCurrentOrder((o) => ({ ...o, accepted: true }));
   const handleReject = () => setCurrentOrder(null);
@@ -293,29 +277,25 @@ const RightPanel = ({ shopName }) => {
   return (
     <>
       {/* Desktop View */}
-      <div className="hidden sm:flex fixed right-4 top-19 bottom-4 w-96 bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/40 overflow-y-scroll flex-col">
+      {/* FIXED: Corrected non-standard Tailwind class `top-19` to `top-20` */}
+      <div className="hidden sm:flex fixed right-4 top-20 bottom-4 w-96 bg-white/80 backdrop-blur-md rounded-2xl shadow-lg border border-white/40 overflow-y-scroll flex-col">
         <ScrollArea className="flex-1">
           <div className="p-4">
             {/* Header: Shop Info & Online Status */}
             <div className="sticky top-0 p-3 bg-white/70 rounded-xl shadow-sm mb-4 z-10">
-              <div className="font-medium text-sm mb-1">{shopName || 'Your Workshop'}</div>
+              <div className="font-medium text-sm mb-1">{shopName || basicNeeds?.shop_name || 'Your Workshop'}</div>
               <StatusSwitch />
             </div>
 
             {/* Searching Indicator + Sim Button */}
             {isOnline && shouldShowDashboard && (
               <>
-                <Button variant="outline" className="w-full mb-4" onClick={simulateNewOrder}>
-                  + Simulate New Order (Test)
-                </Button>
                 <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 mb-5">
                   <CardContent className="p-6">
                     <SearchingForOrders />
                   </CardContent>
                 </Card>
-
                 <JobNotificationPopup />
-
               </>
             )}
 
@@ -350,21 +330,19 @@ const RightPanel = ({ shopName }) => {
           </div>
         ) : (
           <div className="fixed inset-x-4 bottom-4 z-40">
-            {isOnline &&
+            {isOnline && basicNeeds?.status === "ONLINE" &&
               <div className="sticky top-0 p-3 bg-white/90 rounded-xl shadow-sm mb-2 z-10">
-                <MobileOnlineStatus />
+                {/* FIXED: Passed the required `basicNeeds` object as a prop */}
+
+                <MobileOnlineStatus basicNeeds={basicNeeds} />
               </div>
             }
             <div className="bg-white/90 backdrop-blur-lg rounded-xl p-3 shadow-lg border border-gray-200 flex flex-col gap-3">
-
-
-              <div className="flex justify-between items-center font-medium text-xl mb-1">{shopName || 'Your Workshop'}  <StatusSwitch /></div>
-
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="secondary" size="sm" onClick={simulateNewOrder}>
-                  + Simulate Order
-                </Button>
+              <div className="flex justify-between items-center font-medium text-xl mb-1">
+                {shopName || basicNeeds?.shop_name || 'Your Workshop'}
+                <StatusSwitch />
+              </div>
+              <div className="grid ">
                 <Sheet open={detailsSheetOpen} onOpenChange={setDetailsSheetOpen}>
                   <SheetTrigger asChild>
                     <Button variant="default" size="sm">View Details</Button>
@@ -385,7 +363,6 @@ const RightPanel = ({ shopName }) => {
                 </Sheet>
               </div>
             </div>
-
           </div>
         )}
       </div>
