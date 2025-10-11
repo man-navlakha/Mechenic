@@ -46,6 +46,14 @@
   color: white;
 }
 
+.pointer-events-none {
+  pointer-events: none; /* allow clicks to pass through */
+}
+.pointer-events-auto {
+  pointer-events: auto; /* element catches clicks */
+}
+
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
