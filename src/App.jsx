@@ -21,6 +21,7 @@ import LockScreen from './mechanic/componets/LockScreen';
 import { WebSocketProvider } from './context/WebSocketContext';
 import MechanicVerification from './mechanic/componets/admin/MechanicVerification';
 import LegalPages from './mechanic/page/LegalPages';
+import JobDetailsPage from "@/mechanic/page/JobDetailsPage";
 
 
 
@@ -116,6 +117,7 @@ const AppContent = () => {
               <Profile />
             </Protected>
           } />
+           <Route path="/job/:id" element={<JobDetailsPage />} />
 
           {/* You can add a "Not Found" route as a fallback */}
           {/* <Route path="*" element={<NotFound />} /> */}

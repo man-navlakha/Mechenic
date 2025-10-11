@@ -2,6 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import api from '@/utils/api';
 import JobNotificationPopup from '@/components/JobNotificationPopup';
 import JobInProgress  from '@/components/JobInProgress';
+// Add import at top
+import { useNavigate } from 'react-router-dom';
+import { useLocation } from "react-router-dom";
+
+
 
 const WebSocketContext = createContext(null);
 
@@ -18,6 +23,10 @@ export const WebSocketProvider = ({ children }) => {
   const intendedOnlineState = useRef(false);
   const maxReconnectAttempts = 5;
   const locationInterval = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+const isOnJobPage = location.pathname.startsWith("/job/");
+
 
   const updateStatus = async (status) => {
     try {
@@ -291,24 +300,27 @@ export const WebSocketProvider = ({ children }) => {
 
   // Modified handleAcceptJob function
   const handleAcceptJob = async () => {
-  if (!job) {
-    console.warn("No job to accept.");
-    return;
-  }
+    if (!job) {
+      console.warn("No job to accept.");
+      return;
+    }
 
-  console.log("Accepting job:", job);
-  try {
-    await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
-    console.log("Job accepted via API.");
+    console.log("Accepting job:", job);
+    try {
+      await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
+      console.log("Job accepted via API.");
 
-    // ✅ Persist job in localStorage
-    localStorage.setItem('acceptedJob', JSON.stringify(job));
-    setJob(job); // still keep it in memory
+      // ✅ Persist job in localStorage
+      localStorage.setItem('acceptedJob', JSON.stringify(job));
+      setJob(job);
 
-  } catch (error) {
-    console.error("Failed to accept job:", error);
-  }
-};
+      // ✅ Redirect to job details page
+      navigate(`/job/${job.id}`);
+
+    } catch (error) {
+      console.error("Failed to accept job:", error);
+    }
+  };
 
 useEffect(() => {
   console.log("Initial mount - fetching status");
@@ -393,11 +405,14 @@ useEffect(() => {
         </div>
       )}
 
-      <JobNotificationPopup
-        job={job}
-        onAccept={handleAcceptJob}
-        onReject={handleRejectJob}
-      />
+   {!isOnJobPage && (
+  <JobNotificationPopup
+    job={job}
+    onAccept={handleAcceptJob}
+    onReject={handleRejectJob}
+  />
+)}
+
     </WebSocketContext.Provider>
   );
 };
