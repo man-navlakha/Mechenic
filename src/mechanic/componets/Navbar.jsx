@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Wrench, User, Settings, Lock, LogOut, ChevronDown, Menu, BadgeCheck } from 'lucide-react';
 import { useLock } from '../../context/LockContext';
+import { useWebSocket } from '@/context/WebSocketContext';
 
 // Shadcn/ui components
 import { Button } from '@/components/ui/button';
@@ -23,9 +24,16 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-const Navbar = ({ mechanicName = "Man Navlakha", shopName, isOnline, isVerified, setIsOnline }) => {
+const Navbar = ({ }) => {
   const { lockScreen } = useLock();
   const navigate = useNavigate();
+  const { isOnline, isVerified, basicNeeds, job } = useWebSocket();
+  const mechanicName = basicNeeds?.first_name + " " +basicNeeds?.last_name || "";
+  const shopName = basicNeeds?.shop_name || "";
+  const mechanicStatus = basicNeeds?.status || "OFFLINE";
+
+  let statusLabel = mechanicStatus === "WORKING" ? "Working" : isOnline ? "Online" : "Offline";
+
 
   const handleLogout = () => {
     console.log("User logged out");
@@ -34,6 +42,24 @@ const Navbar = ({ mechanicName = "Man Navlakha", shopName, isOnline, isVerified,
 
   return (
     <nav className="bg-background border-b border-border shadow-sm z-30 relative">
+      {/* Active Job Banner */}
+{basicNeeds?.status === "WORKING" && job && (
+  <div className="w-full bg-blue-600 text-white px-4 py-2 flex items-center justify-between text-sm shadow-inner">
+    <div className="truncate">
+      <span className="font-semibold">Active Job #{job.id}:</span> {job.problem}
+    </div>
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => navigate(`/job/${job.id}`)}
+      >
+        View
+      </Button>
+    </div>
+  </div>
+)}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left Side: Logo and Title */}
@@ -46,11 +72,12 @@ const Navbar = ({ mechanicName = "Man Navlakha", shopName, isOnline, isVerified,
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
-                <MobileMenu
-                  mechanicName={mechanicName}
-                  lockScreen={lockScreen}
-                  handleLogout={handleLogout}
-                />
+               <MobileMenu
+  mechanicName={shopName}
+  lockScreen={lockScreen}
+  handleLogout={handleLogout}
+/>
+
               </SheetContent>
             </Sheet>
 
@@ -92,7 +119,7 @@ const Navbar = ({ mechanicName = "Man Navlakha", shopName, isOnline, isVerified,
           <div className="flex items-center space-x-4">
             {/* Online Status Indicator */}
             <div className="hidden sm:flex items-center space-x-2 text-sm text-muted-foreground">
-              <span>{isOnline ?
+              {statusLabel === 'Online' && (
                 <div className="flex items-center gap-2 text-green-600 font-medium">
                   <span className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -100,8 +127,9 @@ const Navbar = ({ mechanicName = "Man Navlakha", shopName, isOnline, isVerified,
                   </span>
                   <span>Online</span>
                 </div>
-                :
+              )}
 
+              {statusLabel === 'Offline' && (
                 <div className="flex items-center gap-2 text-red-600 font-medium">
                   <span className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -109,10 +137,18 @@ const Navbar = ({ mechanicName = "Man Navlakha", shopName, isOnline, isVerified,
                   </span>
                   <span>Offline</span>
                 </div>
+              )}
 
-              }
+              {statusLabel === 'Working' && (
+                <div className="flex items-center gap-2 text-blue-600 font-medium">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                  </span>
+                  <span>Working</span>
+                </div>
+              )}
 
-              </span>
             </div>
 
             {isVerified && (
@@ -126,8 +162,9 @@ const Navbar = ({ mechanicName = "Man Navlakha", shopName, isOnline, isVerified,
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10 border-2 border-primary/20">
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                      {mechanicName.charAt(0).toUpperCase()}
+                      {mechanicName?.charAt(0)?.toUpperCase() || "M"}
                     </AvatarFallback>
+
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '@/utils/api';
 import JobNotificationPopup from '@/components/JobNotificationPopup';
-import JobInProgress  from '@/components/JobInProgress';
+import JobInProgress from '@/components/JobInProgress';
 // Add import at top
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
@@ -14,6 +14,7 @@ export const useWebSocket = () => useContext(WebSocketContext);
 
 export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
+  const socketRef = useRef(null); // NEW
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -25,7 +26,11 @@ export const WebSocketProvider = ({ children }) => {
   const locationInterval = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-const isOnJobPage = location.pathname.startsWith("/job/");
+  const isOnJobPage =
+    location.pathname.startsWith("/job/") ||
+    location.pathname.startsWith("/login");
+    
+
 
 
   const updateStatus = async (status) => {
@@ -112,41 +117,42 @@ const isOnJobPage = location.pathname.startsWith("/job/");
       const newSocket = new WebSocket(wsUrl);
 
       newSocket.onopen = () => {
-      console.log("%c[WS] Connection successful!", "color: #4CAF50; font-weight: bold;");
-      setSocket(newSocket);
-      setConnectionStatus('connected');
-      reconnectAttempts.current = 0;
+        console.log("%c[WS] Connection successful!", "color: #4CAF50; font-weight: bold;");
+        setSocket(newSocket);
+        socketRef.current = newSocket;
+        setConnectionStatus('connected');
+        reconnectAttempts.current = 0;
 
-      // --- START: Location Sending Logic ---
-      if (locationInterval.current) {
-        clearInterval(locationInterval.current);
-      }
-
-      // Send location immediately on connect, then every 1 minute
-      const sendLocation = () => {
-        if (newSocket.readyState === WebSocket.OPEN) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const { latitude, longitude } = position.coords;
-              console.log(`[Location] Sending update: lat=${latitude}, lon=${longitude}`);
-              newSocket.send(JSON.stringify({
-                type: 'location_update',
-                latitude,
-                longitude,
-              }));
-            },
-            (error) => {
-              console.error("[Location] Error getting position:", error.message);
-            },
-            { enableHighAccuracy: true }
-          );
+        // --- START: Location Sending Logic ---
+        if (locationInterval.current) {
+          clearInterval(locationInterval.current);
         }
-      };
 
-      sendLocation(); // Send once immediately
-      locationInterval.current = setInterval(sendLocation, 60000); // And then every 60 seconds
-      // --- END: Location Sending Logic ---
-    };
+        // Send location immediately on connect, then every 1 minute
+        const sendLocation = () => {
+          if (newSocket.readyState === WebSocket.OPEN) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                const { latitude, longitude } = position.coords;
+                console.log(`[Location] Sending update: lat=${latitude}, lon=${longitude}`);
+                newSocket.send(JSON.stringify({
+                  type: 'location_update',
+                  latitude,
+                  longitude,
+                }));
+              },
+              (error) => {
+                console.error("[Location] Error getting position:", error.message);
+              },
+              { enableHighAccuracy: true }
+            );
+          }
+        };
+
+        sendLocation(); // Send once immediately
+        locationInterval.current = setInterval(sendLocation, 60000); // And then every 60 seconds
+        // --- END: Location Sending Logic ---
+      };
 
       newSocket.onmessage = (event) => {
         try {
@@ -163,13 +169,26 @@ const isOnJobPage = location.pathname.startsWith("/job/");
               window.dispatchEvent(new CustomEvent('newJobAvailable', {
                 detail: data.service_request
               }));
-            } else {
-              console.warn("New job type but no service_request in data");
-            }
-          } else {
-            console.log("Other WebSocket message type:", data.type);
-          }
 
+            } else if (data.type === 'job_update' || data.type === 'job_status_ack' || data.type === 'job_status_update') {
+              // Example server shapes:
+              // { type: 'job_update', job: { id, status, ... } }
+              // { type: 'job_status_ack', job_id, status }
+              console.log("[WS] Job update received:", data);
+              if (data.job) {
+                setJob(data.job);
+              } else if (data.job_id && data.status) {
+                setJob(prev => (prev && prev.id && prev.id.toString() === data.job_id.toString()) ? { ...prev, status: data.status } : prev);
+                // optionally clear localStorage when server says job completed/cancelled
+                if (['COMPLETED', 'CANCELLED'].includes(data.status)) {
+                  localStorage.removeItem('acceptedJob');
+                }
+              }
+              else {
+                console.log("Other WebSocket message type:", data.type);
+              }
+            }
+          }
         } catch (e) {
           console.error("Error parsing WS message", e, "Raw data:", event.data);
         }
@@ -179,6 +198,8 @@ const isOnJobPage = location.pathname.startsWith("/job/");
         console.warn(`[WS] Disconnected. Code: ${event.code}, Reason: ${event.reason}`);
         console.log("WebSocket close event:", event);
         setSocket(null);
+        socketRef.current = null;
+
         setConnectionStatus('disconnected');
 
         // Reconnection logic
@@ -224,14 +245,47 @@ const isOnJobPage = location.pathname.startsWith("/job/");
 
   const disconnectWebSocket = () => {
     console.log("Disconnecting WebSocket...");
-    if (socket) {
-      socket.close(1000, "User initiated disconnect");
+    if (socketRef.current) {
+      socketRef.current.close(1000, "User initiated disconnect");
     }
     setSocket(null);
+    socketRef.current = null;
     setConnectionStatus('disconnected');
   };
 
-  
+  // Send job status over websocket (with REST fallback)
+  const sendJobStatus = async (jobId, status) => {
+    const payload = { type: 'job_status_update', job_id: jobId.toString(), status }; // status: "COMPLETED" | "CANCELLED"
+    try {
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify(payload));
+        console.log('[WS] Sent job status via WS', payload);
+        return { ok: true, via: 'ws' };
+      } else {
+        console.warn('[WS] socket not open — falling back to REST', payload);
+        // REST fallback (adjust endpoint to match your backend)
+        await api.post(`/jobs/UpdateJobStatus/${jobId}/`, { status });
+        return { ok: true, via: 'rest' };
+      }
+    } catch (err) {
+      console.error('[sendJobStatus] failed', err);
+      try {
+        // second chance: REST fallback
+        await api.post(`/jobs/UpdateJobStatus/${jobId}/`, { status });
+        return { ok: true, via: 'rest' };
+      } catch (err2) {
+        console.error('[sendJobStatus] REST fallback failed', err2);
+        return { ok: false, error: err2 };
+      }
+    }
+  };
+
+  const clearJob = () => {
+    setJob(null);
+    localStorage.removeItem('acceptedJob');
+  };
+
+
 
   const handleSetIsOnline = (newIsOnline) => {
     console.log("Setting online state to:", newIsOnline);
@@ -240,116 +294,128 @@ const isOnJobPage = location.pathname.startsWith("/job/");
     updateStatus(newIsOnline ? 'ONLINE' : 'OFFLINE');
   };
 
+
   const handleNewJob = (event) => {
     console.log("newJobAvailable event received:", event.detail);
     setJob(event.detail);
   };
 
+
+
   useEffect(() => {
-    console.log("WebSocket Effect - isOnline:", isOnline, "isVerified:", isVerified);
-
-    const handleVisibilityChange = () => {
-      console.log("Visibility changed:", document.visibilityState);
-      if (document.visibilityState === 'hidden' && intendedOnlineState.current) {
-        console.log("Page hidden, setting offline");
-        updateStatus('OFFLINE');
-      } else if (document.visibilityState === 'visible' && intendedOnlineState.current) {
-        console.log("Page visible, setting online");
-        handleSetIsOnline(true);
-      }
-    };
-
-    const handlePageHide = () => {
-      console.log("Page hide event");
-      if (intendedOnlineState.current) {
-        updateStatus('OFFLINE');
-      }
-    };
-
-    const handlePageShow = (event) => {
-      console.log("Page show event, persisted:", event.persisted);
-      if (event.persisted) {
-        fetchInitialStatus();
-      }
-    };
-
-    // Add event listener for new jobs
-    window.addEventListener('newJobAvailable', handleNewJob);
-    window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pagehide', handlePageHide);
-    window.addEventListener('pageshow', handlePageShow);
-
-    console.log("Setting up WebSocket based on conditions");
-    if (isOnline && isVerified) {
-      console.log("Conditions met - connecting WebSocket");
-      connectWebSocket();
-    } else {
-      console.log("Conditions not met - isOnline:", isOnline, "isVerified:", isVerified);
-      disconnectWebSocket();
-    }
-
-    return () => {
-      console.log("Cleaning up WebSocket connection and event listeners");
-      window.removeEventListener('newJobAvailable', handleNewJob);
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pagehide', handlePageHide);
-      window.removeEventListener('pageshow', handlePageShow);
-      disconnectWebSocket();
-    };
-  }, [isOnline, isVerified]);
-
-  // Modified handleAcceptJob function
-  const handleAcceptJob = async () => {
-    if (!job) {
-      console.warn("No job to accept.");
-      return;
-    }
-
-    console.log("Accepting job:", job);
-    try {
-      await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
-      console.log("Job accepted via API.");
-
-      // ✅ Persist job in localStorage
-      localStorage.setItem('acceptedJob', JSON.stringify(job));
-      setJob(job);
-
-      // ✅ Redirect to job details page
-      navigate(`/job/${job.id}`);
-
-    } catch (error) {
-      console.error("Failed to accept job:", error);
+  const handleVisibilityChange = () => {
+    if (basicNeeds?.status === 'WORKING') return;
+    if (document.visibilityState === 'hidden' && intendedOnlineState.current) {
+      updateStatus('OFFLINE');
+    } else if (document.visibilityState === 'visible' && intendedOnlineState.current) {
+      handleSetIsOnline(true);
     }
   };
 
-useEffect(() => {
-  console.log("Initial mount - fetching status");
-  fetchInitialStatus();
+  const handlePageHide = () => {
+    if (intendedOnlineState.current) updateStatus('OFFLINE');
+  };
 
-  // ✅ Restore accepted job if not ONLINE
-  const storedJob = localStorage.getItem('acceptedJob');
-  if (storedJob) {
-    const parsedJob = JSON.parse(storedJob);
-    // Don't show if status is already ONLINE
-    if (parsedJob && basicNeeds?.status !== 'ONLINE') {
-      console.log("Restoring accepted job from localStorage:", parsedJob);
-      setJob(parsedJob);
+  const handlePageShow = (event) => {
+    if (event.persisted) fetchInitialStatus();
+  };
+
+  const handleNewJob = (event) => setJob(event.detail);
+
+  // Fetch initial status
+  fetchInitialStatus().then(() => {
+    const storedJob = localStorage.getItem("acceptedJob");
+    if (storedJob) {
+      const parsedJob = JSON.parse(storedJob);
+      if (parsedJob) {
+        setJob(parsedJob);
+        setBasicNeeds(prev => ({ ...prev, status: "WORKING" }));
+        intendedOnlineState.current = true;
+        setIsOnline(true);
+      }
     }
+  });
+
+  // Add event listeners
+  window.addEventListener("newJobAvailable", handleNewJob);
+  window.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("pagehide", handlePageHide);
+  window.addEventListener("pageshow", handlePageShow);
+
+  // Connect WebSocket only if verified
+  if (isVerified) connectWebSocket();
+
+  return () => {
+    window.removeEventListener("newJobAvailable", handleNewJob);
+    window.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("pagehide", handlePageHide);
+    window.removeEventListener("pageshow", handlePageShow);
+    disconnectWebSocket();
+  };
+}, [isVerified]);
+
+
+  // Modified handleAcceptJob function
+  const handleAcceptJob = async () => {
+  if (!job) return;
+  try {
+    // Accept job via API
+    await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
+    console.log("Job accepted via API.");
+
+    // Update mechanic status → WORKING
+    await api.put("/jobs/UpdateMechanicStatus/", { status: "WORKING" });
+    console.log("Mechanic status updated to WORKING");
+
+    // Update local state immediately
+    setBasicNeeds(prev => ({ ...prev, status: "WORKING" }));
+    intendedOnlineState.current = true;
+    setIsOnline(true);
+
+    // Save job locally
+    localStorage.setItem("acceptedJob", JSON.stringify(job));
+    setJob(job);
+
+    // Navigate to job details page
+    navigate(`/job/${job.id}`);
+  } catch (error) {
+    console.error("Failed to accept job:", error);
   }
-}, []);
+};
 
 
-useEffect(() => {
-  if (basicNeeds?.status === 'ONLINE') {
-    localStorage.removeItem('acceptedJob');
-    setJob(null); // clear in-memory job too
-    console.log("Status is ONLINE — cleared accepted job");
+
+
+  useEffect(() => {
+    console.log("Initial mount - fetching status");
+    fetchInitialStatus();
+
+    // ✅ Restore accepted job if not ONLINE
+    const storedJob = localStorage.getItem('acceptedJob');
+    if (storedJob) {
+      const parsedJob = JSON.parse(storedJob);
+      // Don't show if status is already ONLINE
+      if (parsedJob && basicNeeds?.status !== 'ONLINE') {
+        console.log("Restoring accepted job from localStorage:", parsedJob);
+        setJob(parsedJob);
+      }
+    }
+  }, []);
+
+
+  useEffect(() => {
+    if (basicNeeds?.status === 'ONLINE') {
+      localStorage.removeItem('acceptedJob');
+      setJob(null); // clear in-memory job too
+      console.log("Status is ONLINE — cleared accepted job");
+    }
+  }, [basicNeeds?.status]);
+
+  {
+    job && basicNeeds?.status !== 'ONLINE' && (
+      <JobInProgress job={job} />
+    )
   }
-}, [basicNeeds?.status]);
-
-{job && basicNeeds?.status !== 'ONLINE' && (
-  <JobInProgress job={job} />
-)}
 
 
   const handleRejectJob = () => {
@@ -366,7 +432,10 @@ useEffect(() => {
     basicNeeds,
     connectWebSocket,
     disconnectWebSocket,
-   
+    job,               // expose current job
+    sendJobStatus,     // function to send status
+    clearJob,          // helper to clear job & localStorage
+
   };
 
   return (
@@ -375,7 +444,7 @@ useEffect(() => {
 
       {/* Debug panel */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-2 left-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
+        <div className="fixed top-12 left-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
           <div><strong>WebSocket Debug</strong></div>
           <div>Status: <span className={
             connectionStatus === 'connected' ? 'text-green-400' :
@@ -404,14 +473,29 @@ useEffect(() => {
           </button>
         </div>
       )}
+      {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
+  <div className="fixed top-0 left-0 right-0 z-40 bg-blue-600 text-white flex items-center justify-between px-4 py-3 shadow-lg">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+      <span className="font-semibold">Active Job #{job.id}</span>
+      <span className="text-sm opacity-90 truncate max-w-xs">{job.problem}</span>
+    </div>
+    <button
+      onClick={() => navigate(`/job/${job.id}`)}
+      className="bg-white text-blue-600 px-3 py-1 rounded-md font-medium hover:bg-gray-100 transition"
+    >
+      View Job
+    </button>
+  </div>
+)}
 
-   {!isOnJobPage && (
+{!isOnJobPage && !basicNeeds?.status === "WORKING" && job && (
   <JobNotificationPopup
     job={job}
     onAccept={handleAcceptJob}
     onReject={handleRejectJob}
   />
 )}
+
 
     </WebSocketContext.Provider>
   );

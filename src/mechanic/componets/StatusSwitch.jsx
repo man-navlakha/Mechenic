@@ -5,8 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
 
 export default function StatusSwitch() {
-  // 👇 Get state and functions from the context
-  const { isOnline, setIsOnline, isVerified, connectionStatus } = useWebSocket();
+  const { isOnline, setIsOnline, isVerified, connectionStatus, basicNeeds } = useWebSocket();
   const [loading, setLoading] = useState(false);
 
   const toggleStatus = async (checked) => {
@@ -17,8 +16,7 @@ export default function StatusSwitch() {
 
     setLoading(true);
     try {
-      // The context will now handle the API call
-      setIsOnline(checked);
+      setIsOnline(checked); // WebSocketContext handles API call
     } catch (error) {
       const errorMessage = error.response?.data?.message || "Failed to update status.";
       alert(errorMessage);
@@ -53,47 +51,44 @@ export default function StatusSwitch() {
     }
   };
 
+  // Determine displayed status
+  let statusLabel = "Offline";
+  if (basicNeeds?.status === "WORKING") statusLabel = "Working";
+  else if (isOnline) statusLabel = "Online";
 
   return (
-
     isVerified ?
       !loading ?
-        <div className="flex items-center text-sm  space-x-2">
+        <div className="flex items-center text-sm space-x-2">
           <Switch
-            checked={isOnline}
+            checked={isOnline && basicNeeds?.status !== "WORKING"} // disable toggle when working
             onCheckedChange={toggleStatus}
-            disabled={!isVerified || loading}
+            disabled={!isVerified || loading || basicNeeds?.status === "WORKING"}
             className={!isVerified ? "opacity-50 cursor-not-allowed" : ""}
           />
-          <div className="flex  items-start space-x-2">
-
-
-            <div className={` font-medium ${isOnline ? "text-green-600" : "text-gray-600"}`}>
-              {isOnline ? "Online" : "Offline"}
+          <div className="flex items-start space-x-2">
+            <div className={`font-medium ${statusLabel === 'Online' ? 'text-green-600' : statusLabel === 'Working' ? 'text-blue-600' : 'text-gray-600'}`}>
+              {statusLabel}
             </div>
 
-
-            {isOnline && (
-              <div className="flex items-center space-x-1 ">
+            {isOnline && basicNeeds?.status !== "WORKING" && (
+              <div className="flex items-center space-x-1">
                 {getConnectionStatusIcon()}
                 <span className={`
-              ${connectionStatus === 'connected' ? 'text-green-500' : ''}
-              ${connectionStatus === 'connecting' ? 'text-yellow-500' : ''}
-              ${connectionStatus === 'error' ? 'text-red-500' : ''}
-              ${connectionStatus === 'disconnected' ? 'text-gray-500' : ''}
-            `}>
+                  ${connectionStatus === 'connected' ? 'text-green-500' : ''}
+                  ${connectionStatus === 'connecting' ? 'text-yellow-500' : ''}
+                  ${connectionStatus === 'error' ? 'text-red-500' : ''}
+                  ${connectionStatus === 'disconnected' ? 'text-gray-500' : ''}
+                `}>
                   {getConnectionStatusText()}
                 </span>
               </div>
             )}
-
           </div>
         </div>
         :
-        <div class="w-10 h-10 border-4 border-t-blue-500 border-gray-300 rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-t-blue-500 border-gray-300 rounded-full animate-spin"></div>
       :
       <span className="text-red-500 text-xs font-medium">(Verification required)</span>
   );
-
-
 }
