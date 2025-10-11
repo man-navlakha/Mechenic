@@ -121,7 +121,7 @@ export const WebSocketProvider = ({ children }) => {
               const { latitude, longitude } = position.coords;
               console.log(`[Location] Sending update: lat=${latitude}, lon=${longitude}`);
               newSocket.send(JSON.stringify({
-                type: 'mechanic_location',
+                type: 'location_update',
                 latitude,
                 longitude,
               }));
