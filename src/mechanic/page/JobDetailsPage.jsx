@@ -59,7 +59,8 @@ export default function JobDetailsPage() {
             clearJob();
 
             // Navigate back to dashboard
-            navigate('/');
+          window.location.href = '/';
+
         } catch (err) {
             console.error("Failed to update job:", err);
             alert("Something went wrong. Please try again.");

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react'; // Removed unused hooks: useState, useEffect, useRef
 import { Link, useNavigate } from 'react-router-dom';
-import { Wrench, User, Settings, Lock, LogOut, ChevronDown, Menu, BadgeCheck } from 'lucide-react';
+import { Wrench, User, Settings, Lock, LogOut, Menu, BadgeCheck } from 'lucide-react'; // Removed unused ChevronDown
 import { useLock } from '../../context/LockContext';
 import { useWebSocket } from '@/context/WebSocketContext';
 
@@ -24,16 +24,18 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-const Navbar = ({ }) => {
+const Navbar = () => { // Removed unused {} from props
+  // FIXED: The useWebSocket hook is now called inside the component.
+  const { isOnline, isVerified, basicNeeds, job } = useWebSocket();
   const { lockScreen } = useLock();
   const navigate = useNavigate();
-  const { isOnline, isVerified, basicNeeds, job } = useWebSocket();
-  const mechanicName = basicNeeds?.first_name + " " +basicNeeds?.last_name || "";
+
+  // A more robust way to construct the name to avoid "undefined undefined"
+  const mechanicName = basicNeeds ? `${basicNeeds.first_name || ''} ${basicNeeds.last_name || ''}`.trim() : "";
   const shopName = basicNeeds?.shop_name || "";
   const mechanicStatus = basicNeeds?.status || "OFFLINE";
 
   let statusLabel = mechanicStatus === "WORKING" ? "Working" : isOnline ? "Online" : "Offline";
-
 
   const handleLogout = () => {
     console.log("User logged out");
@@ -43,22 +45,23 @@ const Navbar = ({ }) => {
   return (
     <nav className="bg-background border-b border-border shadow-sm z-30 relative">
       {/* Active Job Banner */}
-{basicNeeds?.status === "WORKING" && job && (
-  <div className="w-full bg-blue-600 text-white px-4 py-2 flex items-center justify-between text-sm shadow-inner">
-    <div className="truncate">
-      <span className="font-semibold">Active Job #{job.id}:</span> {job.problem}
-    </div>
-    <div className="flex gap-2">
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => navigate(`/job/${job.id}`)}
-      >
-        View
-      </Button>
-    </div>
-  </div>
-)}
+      {basicNeeds?.status === "WORKING" && job && (
+        <div className="w-full bg-blue-600 text-white px-4 py-2 flex items-center justify-between text-sm shadow-inner">
+          <div className="truncate">
+            <span className="font-semibold">Active Job #{job.id}:</span> {job.problem}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="text-black"
+              variant="outline"
+              onClick={() => navigate(`/job/${job.id}`)}
+            >
+              View
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -72,17 +75,19 @@ const Navbar = ({ }) => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
-               <MobileMenu
-  mechanicName={shopName}
-  lockScreen={lockScreen}
-  handleLogout={handleLogout}
-/>
-
+                {/* FIXED: Passed all the necessary props to MobileMenu */}
+                <MobileMenu
+                  mechanicName={mechanicName}
+                  shopName={shopName}
+                  lockScreen={lockScreen}
+                  handleLogout={handleLogout}
+                  basicNeeds={basicNeeds}
+                  job={job}
+                />
               </SheetContent>
             </Sheet>
 
             <Link to="/" className="flex items-center space-x-3">
-
               <div>
                 <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                   Mechanic
@@ -102,11 +107,14 @@ const Navbar = ({ }) => {
                   Dashboard
                 </Link>
               </Button>
-              <Button variant="ghost" asChild>
-                <Link to="/jobs" className="text-sm font-medium">
-                  Jobs
-                </Link>
-              </Button>
+              {basicNeeds?.status === "WORKING" && job && (
+                <Button variant="ghost" asChild>
+                  {/* FIXED: Used template literal for dynamic route */}
+                  <Link to={`/job/${job.id}`} className="text-sm font-medium">
+                    Jobs
+                  </Link>
+                </Button>
+              )}
               <Button variant="ghost" asChild>
                 <Link to="/earnings" className="text-sm font-medium">
                   Earnings
@@ -128,7 +136,6 @@ const Navbar = ({ }) => {
                   <span>Online</span>
                 </div>
               )}
-
               {statusLabel === 'Offline' && (
                 <div className="flex items-center gap-2 text-red-600 font-medium">
                   <span className="relative flex h-3 w-3">
@@ -138,7 +145,6 @@ const Navbar = ({ }) => {
                   <span>Offline</span>
                 </div>
               )}
-
               {statusLabel === 'Working' && (
                 <div className="flex items-center gap-2 text-blue-600 font-medium">
                   <span className="relative flex h-3 w-3">
@@ -148,23 +154,21 @@ const Navbar = ({ }) => {
                   <span>Working</span>
                 </div>
               )}
-
             </div>
 
             {isVerified && (
-              <Badge variant="success" className="text-xs text-green-500 bg-green-300/30 ml-1"><BadgeCheck className="h-4 w-4 text-green-500" /> Verified</Badge>
+              <Badge variant="success" className="text-xs text-green-500 bg-green-300/30 ml-1">
+                <BadgeCheck className="h-4 w-4 text-green-500 mr-1" /> Verified
+              </Badge>
             )}
-
-
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Button variant="ghost" className="hidden sm:flex relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10 border-2 border-primary/20">
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                       {mechanicName?.charAt(0)?.toUpperCase() || "M"}
                     </AvatarFallback>
-
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -180,23 +184,18 @@ const Navbar = ({ }) => {
                     </p>
                   </div>
                 </DropdownMenuLabel>
-
                 <DropdownMenuSeparator />
-
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-
                 <DropdownMenuItem onClick={lockScreen}>
                   <Lock className="mr-2 h-4 w-4" />
                   <span>Lock Screen</span>
                 </DropdownMenuItem>
-
                 <DropdownMenuSeparator />
-
                 <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-destructive focus:text-destructive"
@@ -214,19 +213,21 @@ const Navbar = ({ }) => {
 };
 
 // Mobile Menu Component
-const MobileMenu = ({ mechanicName, lockScreen, handleLogout }) => {
+// FIXED: Accepted necessary props: `basicNeeds`, `job`, and `shopName`.
+const MobileMenu = ({ mechanicName, shopName, lockScreen, handleLogout, basicNeeds, job }) => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center space-x-3 p-4 border-b">
         <Avatar className="h-10 w-10">
           <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-            {mechanicName.charAt(0).toUpperCase()}
+            {mechanicName?.charAt(0)?.toUpperCase() || 'M'}
           </AvatarFallback>
         </Avatar>
         <div>
           <p className="font-semibold">{mechanicName}</p>
-          <p className="text-sm text-muted-foreground">Mechanic</p>
+          {/* FIXED: Display shop name correctly */}
+          <p className="text-sm text-muted-foreground">{shopName}</p>
         </div>
       </div>
 
@@ -239,12 +240,15 @@ const MobileMenu = ({ mechanicName, lockScreen, handleLogout }) => {
               Dashboard
             </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start" asChild>
-            <Link to="/jobs">
-              <Wrench className="mr-2 h-4 w-4" />
-              Jobs
-            </Link>
-          </Button>
+          {basicNeeds?.status === "WORKING" && job && (
+            <Button variant="ghost" className="w-full justify-start" asChild>
+              {/* FIXED: Used template literal for dynamic route */}
+              <Link to={`/job/${job.id}`}>
+                <Wrench className="mr-2 h-4 w-4" />
+                Jobs
+              </Link>
+            </Button>
+          )}
           <Button variant="ghost" className="w-full justify-start" asChild>
             <Link to="/earnings">
               <Wrench className="mr-2 h-4 w-4" />
@@ -261,12 +265,6 @@ const MobileMenu = ({ mechanicName, lockScreen, handleLogout }) => {
             <Link to="/profile">
               <User className="mr-2 h-4 w-4" />
               Profile
-            </Link>
-          </Button>
-          <Button variant="ghost" className="w-full justify-start" asChild>
-            <Link to="/settings">
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
             </Link>
           </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={lockScreen}>

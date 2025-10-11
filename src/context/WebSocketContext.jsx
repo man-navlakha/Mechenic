@@ -15,6 +15,13 @@ export const useWebSocket = () => useContext(WebSocketContext);
 export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const socketRef = useRef(null); // NEW
+  const jobTimeoutRef = useRef(null);
+  const jobNotificationSound = new Audio('/sounds/alert-33762.mp3');
+  jobNotificationSound.volume = 0.5;
+  jobNotificationSound.preload = 'auto';
+
+
+
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -29,8 +36,22 @@ export const WebSocketProvider = ({ children }) => {
   const isOnJobPage =
     location.pathname.startsWith("/job/") ||
     location.pathname.startsWith("/login");
-    
 
+
+  const userInteracted = useRef(false);
+
+  // Listen for first interaction
+  useEffect(() => {
+    const markInteracted = () => { userInteracted.current = true; }
+    window.addEventListener('click', markInteracted, { once: true });
+    window.addEventListener('keydown', markInteracted, { once: true });
+    window.addEventListener('touchstart', markInteracted, { once: true });
+    return () => {
+      window.removeEventListener('click', markInteracted);
+      window.removeEventListener('keydown', markInteracted);
+      window.removeEventListener('touchstart', markInteracted);
+    };
+  }, []);
 
 
   const updateStatus = async (status) => {
@@ -160,39 +181,31 @@ export const WebSocketProvider = ({ children }) => {
           console.log("[WS] Raw message received:", event.data);
           console.log("[WS] Parsed data:", data);
 
-          if (data.type === 'new_job') {
-            console.log("New job detected - full data:", data);
-            console.log("Service request data:", data.service_request);
-
-            if (data.service_request) {
-              console.log("Dispatching newJobAvailable event with detail:", data.service_request);
-              window.dispatchEvent(new CustomEvent('newJobAvailable', {
-                detail: data.service_request
-              }));
-
-            } else if (data.type === 'job_update' || data.type === 'job_status_ack' || data.type === 'job_status_update') {
-              // Example server shapes:
-              // { type: 'job_update', job: { id, status, ... } }
-              // { type: 'job_status_ack', job_id, status }
-              console.log("[WS] Job update received:", data);
-              if (data.job) {
-                setJob(data.job);
-              } else if (data.job_id && data.status) {
-                setJob(prev => (prev && prev.id && prev.id.toString() === data.job_id.toString()) ? { ...prev, status: data.status } : prev);
-                // optionally clear localStorage when server says job completed/cancelled
-                if (['COMPLETED', 'CANCELLED'].includes(data.status)) {
-                  localStorage.removeItem('acceptedJob');
-                }
-              }
-              else {
-                console.log("Other WebSocket message type:", data.type);
+          if (data.type === 'new_job' && data.service_request) {
+            window.dispatchEvent(new CustomEvent('newJobAvailable', {
+              detail: data.service_request
+            }));
+          } else if (data.type === 'job_update' || data.type === 'job_status_ack' || data.type === 'job_status_update') {
+            if (data.job) {
+              setJob(data.job);
+            } else if (data.job_id && data.status) {
+              setJob(prev => (prev?.id?.toString() === data.job_id.toString()) ? { ...prev, status: data.status } : prev);
+              if (['COMPLETED', 'CANCELLED'].includes(data.status)) {
+                localStorage.removeItem('acceptedJob');
               }
             }
+          } else if (data.type === 'job_expired') {
+            console.log(`[WS] Job expired: ${data.job_id}`);
+            // Only remove popup if the expired job matches the current job
+            setJob(prev => (prev?.id?.toString() === data.job_id.toString() ? null : prev));
+            localStorage.removeItem('acceptedJob');
           }
+
         } catch (e) {
           console.error("Error parsing WS message", e, "Raw data:", event.data);
         }
       };
+
 
       newSocket.onclose = (event) => {
         console.warn(`[WS] Disconnected. Code: ${event.code}, Reason: ${event.reason}`);
@@ -298,90 +311,98 @@ export const WebSocketProvider = ({ children }) => {
   const handleNewJob = (event) => {
     console.log("newJobAvailable event received:", event.detail);
     setJob(event.detail);
+
+    if (userInteracted.current) {
+      jobNotificationSound.currentTime = 0; // restart sound if already playing
+      jobNotificationSound.play().catch(err => {
+        console.warn("Audio play failed:", err);
+      });
+    }
   };
+
 
 
 
   useEffect(() => {
-  const handleVisibilityChange = () => {
-    if (basicNeeds?.status === 'WORKING') return;
-    if (document.visibilityState === 'hidden' && intendedOnlineState.current) {
-      updateStatus('OFFLINE');
-    } else if (document.visibilityState === 'visible' && intendedOnlineState.current) {
-      handleSetIsOnline(true);
-    }
-  };
-
-  const handlePageHide = () => {
-    if (intendedOnlineState.current) updateStatus('OFFLINE');
-  };
-
-  const handlePageShow = (event) => {
-    if (event.persisted) fetchInitialStatus();
-  };
-
-  const handleNewJob = (event) => setJob(event.detail);
-
-  // Fetch initial status
-  fetchInitialStatus().then(() => {
-    const storedJob = localStorage.getItem("acceptedJob");
-    if (storedJob) {
-      const parsedJob = JSON.parse(storedJob);
-      if (parsedJob) {
-        setJob(parsedJob);
-        setBasicNeeds(prev => ({ ...prev, status: "WORKING" }));
-        intendedOnlineState.current = true;
-        setIsOnline(true);
+    const handleVisibilityChange = () => {
+      if (basicNeeds?.status === 'WORKING') return;
+      if (document.visibilityState === 'hidden' && intendedOnlineState.current) {
+        updateStatus('OFFLINE');
+      } else if (document.visibilityState === 'visible' && intendedOnlineState.current) {
+        handleSetIsOnline(true);
       }
-    }
-  });
+    };
 
-  // Add event listeners
-  window.addEventListener("newJobAvailable", handleNewJob);
-  window.addEventListener("visibilitychange", handleVisibilityChange);
-  window.addEventListener("pagehide", handlePageHide);
-  window.addEventListener("pageshow", handlePageShow);
+    const handlePageHide = () => {
+      if (intendedOnlineState.current) updateStatus('OFFLINE');
+    };
 
-  // Connect WebSocket only if verified
-  if (isVerified) connectWebSocket();
+    const handlePageShow = (event) => {
+      if (event.persisted) fetchInitialStatus();
+    };
 
-  return () => {
-    window.removeEventListener("newJobAvailable", handleNewJob);
-    window.removeEventListener("visibilitychange", handleVisibilityChange);
-    window.removeEventListener("pagehide", handlePageHide);
-    window.removeEventListener("pageshow", handlePageShow);
-    disconnectWebSocket();
-  };
-}, [isVerified]);
+    const handleNewJob = (event) => setJob(event.detail);
+
+    // Fetch initial status
+    fetchInitialStatus().then(() => {
+      const storedJob = localStorage.getItem("acceptedJob");
+      if (storedJob) {
+        const parsedJob = JSON.parse(storedJob);
+        if (parsedJob) {
+          setJob(parsedJob);
+          setBasicNeeds(prev => ({ ...prev, status: "WORKING" }));
+          intendedOnlineState.current = true;
+          setIsOnline(true);
+        }
+      }
+    });
+
+    // Add event listeners
+    window.addEventListener("newJobAvailable", handleNewJob);
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("pageshow", handlePageShow);
+
+    // Connect WebSocket only if verified
+    if (isVerified) connectWebSocket();
+
+    return () => {
+      window.removeEventListener("newJobAvailable", handleNewJob);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("pageshow", handlePageShow);
+      disconnectWebSocket();
+    };
+  }, [isVerified]);
 
 
   // Modified handleAcceptJob function
   const handleAcceptJob = async () => {
-  if (!job) return;
-  try {
-    // Accept job via API
-    await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
-    console.log("Job accepted via API.");
+    if (!job) return;
+    try {
+      // Accept job via API
+      await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
+      console.log("Job accepted via API.");
 
-    // Update mechanic status → WORKING
-    await api.put("/jobs/UpdateMechanicStatus/", { status: "WORKING" });
-    console.log("Mechanic status updated to WORKING");
+      // Update mechanic status → WORKING
+      await api.put("/jobs/UpdateMechanicStatus/", { status: "WORKING" });
+      console.log("Mechanic status updated to WORKING");
 
-    // Update local state immediately
-    setBasicNeeds(prev => ({ ...prev, status: "WORKING" }));
-    intendedOnlineState.current = true;
-    setIsOnline(true);
+      // Update local state immediately
+      setBasicNeeds(prev => ({ ...prev, status: "WORKING" }));
+      intendedOnlineState.current = true;
+      setIsOnline(true);
 
-    // Save job locally
-    localStorage.setItem("acceptedJob", JSON.stringify(job));
-    setJob(job);
+      // Save job locally
+      localStorage.setItem("acceptedJob", JSON.stringify(job));
+      setJob(job);
 
-    // Navigate to job details page
-    navigate(`/job/${job.id}`);
-  } catch (error) {
-    console.error("Failed to accept job:", error);
-  }
-};
+      // Navigate to job details page
+      navigate(`/job/${job.id}`);
+    } catch (error) {
+      console.error("Failed to accept job:", error);
+    }
+  };
 
 
 
@@ -444,7 +465,7 @@ export const WebSocketProvider = ({ children }) => {
 
       {/* Debug panel */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-12 left-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
+        <div className="fixed top-19 left-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
           <div><strong>WebSocket Debug</strong></div>
           <div>Status: <span className={
             connectionStatus === 'connected' ? 'text-green-400' :
@@ -474,27 +495,28 @@ export const WebSocketProvider = ({ children }) => {
         </div>
       )}
       {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
-  <div className="fixed top-0 left-0 right-0 z-40 bg-blue-600 text-white flex items-center justify-between px-4 py-3 shadow-lg">
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-      <span className="font-semibold">Active Job #{job.id}</span>
-      <span className="text-sm opacity-90 truncate max-w-xs">{job.problem}</span>
-    </div>
-    <button
-      onClick={() => navigate(`/job/${job.id}`)}
-      className="bg-white text-blue-600 px-3 py-1 rounded-md font-medium hover:bg-gray-100 transition"
-    >
-      View Job
-    </button>
-  </div>
-)}
+        <div className="fixed top-0 left-0 right-0 z-40 bg-blue-600 text-white flex items-center justify-between px-4 py-3 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <span className="font-semibold">Active Job #{job.id}</span>
+            <span className="text-sm opacity-90 truncate max-w-xs">{job.problem}</span>
+          </div>
+          <button
+            onClick={() => navigate(`/job/${job.id}`)}
+            className="bg-white text-blue-600 px-3 py-1 rounded-md font-medium hover:bg-gray-100 transition"
+          >
+            View Job
+          </button>
+        </div>
+      )}
 
-{!isOnJobPage && !basicNeeds?.status === "WORKING" && job && (
-  <JobNotificationPopup
-    job={job}
-    onAccept={handleAcceptJob}
-    onReject={handleRejectJob}
-  />
-)}
+      {!isOnJobPage && basicNeeds?.status !== "WORKING" && job && (
+        <JobNotificationPopup
+          job={job}
+          onAccept={handleAcceptJob}
+          onReject={handleRejectJob}
+        />
+      )}
+
 
 
     </WebSocketContext.Provider>
