@@ -195,22 +195,22 @@ export const WebSocketProvider = ({ children }) => {
               }
             }
           } else if (data.type === 'job_taken') {
-  console.warn(`[WS] Job already taken by another mechanic: ${data.job_id}`);
-  if (job?.id?.toString() === data.job_id?.toString()) {
-    alert('This job has already been taken by another mechanic.');
-    clearTimeout(jobTimeoutRef.current);
-    setJob(null);
-    localStorage.removeItem('acceptedJob');
-  }
-} else if (data.type === 'job_expired') {
-  console.warn(`[WS] Job expired: ${data.job_id}`);
-  if (job?.id?.toString() === data.job_id?.toString()) {
-    clearTimeout(jobTimeoutRef.current);
-    setJob(null);
-    localStorage.removeItem('acceptedJob');
-  }
-}
-else if (data.type === 'job_expired') {
+            console.warn(`[WS] Job already taken by another mechanic: ${data.job_id}`);
+            if (job?.id?.toString() === data.job_id?.toString()) {
+              alert('This job has already been taken by another mechanic.');
+              clearTimeout(jobTimeoutRef.current);
+              setJob(null);
+              localStorage.removeItem('acceptedJob');
+            }
+          } else if (data.type === 'job_expired') {
+            console.warn(`[WS] Job expired: ${data.job_id}`);
+            if (job?.id?.toString() === data.job_id?.toString()) {
+              clearTimeout(jobTimeoutRef.current);
+              setJob(null);
+              localStorage.removeItem('acceptedJob');
+            }
+          }
+          else if (data.type === 'job_expired') {
             console.log(`[WS] Job expired: ${data.job_id}`);
             // Only remove popup if the expired job matches the current job
             setJob(prev => (prev?.id?.toString() === data.job_id.toString() ? null : prev));
@@ -227,33 +227,33 @@ else if (data.type === 'job_expired') {
         }
       };
 
-// Auto-reject or expire job if not accepted within 30 seconds
-useEffect(() => {
-  if (!job || basicNeeds?.status === 'WORKING') return;
+      // Auto-reject or expire job if not accepted within 30 seconds
+      useEffect(() => {
+        if (!job || basicNeeds?.status === 'WORKING') return;
 
-  console.log('[Job Timer] Starting 30s auto-reject timer...');
-  clearTimeout(jobTimeoutRef.current);
+        console.log('[Job Timer] Starting 30s auto-reject timer...');
+        clearTimeout(jobTimeoutRef.current);
 
-  jobTimeoutRef.current = setTimeout(() => {
-    console.warn('[Job Timer] Job auto-rejected due to timeout.');
-    setJob(null);
-    localStorage.removeItem('acceptedJob');
+        jobTimeoutRef.current = setTimeout(() => {
+          console.warn('[Job Timer] Job auto-rejected due to timeout.');
+          setJob(null);
+          localStorage.removeItem('acceptedJob');
 
-    // Optionally send status to backend
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(
-        JSON.stringify({
-          type: 'job_status_update',
-          job_id: job.id.toString(),
-          status: 'REJECTED',
-          reason: 'timeout',
-        })
-      );
-    }
-  }, 30000); // 30 seconds
+          // Optionally send status to backend
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(
+              JSON.stringify({
+                type: 'job_status_update',
+                job_id: job.id.toString(),
+                status: 'REJECTED',
+                reason: 'timeout',
+              })
+            );
+          }
+        }, 30000); // 30 seconds
 
-  return () => clearTimeout(jobTimeoutRef.current);
-}, [job, basicNeeds?.status]);
+        return () => clearTimeout(jobTimeoutRef.current);
+      }, [job, basicNeeds?.status]);
 
       newSocket.onclose = (event) => {
         console.warn(`[WS] Disconnected. Code: ${event.code}, Reason: ${event.reason}`);
@@ -455,30 +455,30 @@ useEffect(() => {
 
   const cancelJob = async (jobId, reason) => {
     try {
-        await api.post(`/jobs/CancelServiceRequest/${jobId}/`, { cancellation_reason: reason });
-        console.log("Job cancellation request sent.");
-        clearJob();
-        navigate('/');
+      await api.post(`/jobs/CancelServiceRequest/${jobId}/`, { cancellation_reason: reason });
+      console.log("Job cancellation request sent.");
+      clearJob();
+      navigate('/');
     } catch (error) {
-        console.error("Failed to cancel job:", error);
-        // Optionally, re-throw or handle the error in the UI
-        throw error;
+      console.error("Failed to cancel job:", error);
+      // Optionally, re-throw or handle the error in the UI
+      throw error;
     }
   };
 
   const completeJob = async (jobId, price) => {
     try {
-        await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
-        console.log("Job completion request sent.");
-        
-        // Go back to being online after completing a job
-        await updateStatus("ONLINE");
-        
-        clearJob();
-        navigate('/');
+      await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
+      console.log("Job completion request sent.");
+
+      // Go back to being online after completing a job
+      await updateStatus("ONLINE");
+
+      clearJob();
+      navigate('/');
     } catch (error) {
-        console.error("Failed to complete job:", error);
-        throw error;
+      console.error("Failed to complete job:", error);
+      throw error;
     }
   };
 
