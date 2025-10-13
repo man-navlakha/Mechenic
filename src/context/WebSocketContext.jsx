@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import api from '@/utils/api';
 import JobNotificationPopup from '@/components/JobNotificationPopup';
 import JobInProgress from '@/components/JobInProgress';
-// Add import at top
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
 
@@ -199,6 +198,11 @@ export const WebSocketProvider = ({ children }) => {
             // Only remove popup if the expired job matches the current job
             setJob(prev => (prev?.id?.toString() === data.job_id.toString() ? null : prev));
             localStorage.removeItem('acceptedJob');
+          } else if (data.type === 'job_cancelled') {
+            console.log(`[WS] Job cancelled by user: ${data.job_id}`);
+            alert(`Job #${data.job_id} has been cancelled by the user. Reason: ${data.message}`);
+            clearJob();
+            navigate('/');
           }
 
         } catch (e) {
@@ -404,6 +408,18 @@ export const WebSocketProvider = ({ children }) => {
     }
   };
 
+  const cancelJob = async (jobId, reason) => {
+    try {
+        await api.post(`/jobs/CancelServiceRequest/${jobId}/`, { cancellation_reason: basicNeeds?.first +" "+ reason });
+        console.log("Job cancellation request sent.");
+        clearJob();
+        navigate('/');
+    } catch (error) {
+        console.error("Failed to cancel job:", error);
+        // Optionally, re-throw or handle the error in the UI
+        throw error;
+    }
+  };
 
 
 
@@ -456,7 +472,7 @@ export const WebSocketProvider = ({ children }) => {
     job,               // expose current job
     sendJobStatus,     // function to send status
     clearJob,          // helper to clear job & localStorage
-
+    cancelJob, // expose new cancel function
   };
 
   return (

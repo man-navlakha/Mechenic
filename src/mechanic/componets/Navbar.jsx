@@ -23,12 +23,19 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useLocation } from "react-router-dom";
 
 const Navbar = () => { // Removed unused {} from props
   // FIXED: The useWebSocket hook is now called inside the component.
   const { isOnline, isVerified, basicNeeds, job } = useWebSocket();
   const { lockScreen } = useLock();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isOnJobPage =
+    location.pathname.startsWith("/job/") ||
+    location.pathname.startsWith("/login");
+
+
 
   // A more robust way to construct the name to avoid "undefined undefined"
   const mechanicName = basicNeeds ? `${basicNeeds.first_name || ''} ${basicNeeds.last_name || ''}`.trim() : "";
@@ -45,7 +52,7 @@ const Navbar = () => { // Removed unused {} from props
   return (
     <nav className="bg-background border-b border-border shadow-sm z-30 relative">
       {/* Active Job Banner */}
-      {basicNeeds?.status === "WORKING" && job && (
+      {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
         <div className="w-full bg-blue-600 text-white px-4 py-2 flex items-center justify-between text-sm shadow-inner">
           <div className="truncate">
             <span className="font-semibold">Active Job #{job.id}:</span> {job.problem}
@@ -107,7 +114,7 @@ const Navbar = () => { // Removed unused {} from props
                   Dashboard
                 </Link>
               </Button>
-              {basicNeeds?.status === "WORKING" && job && (
+              {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
                 <Button variant="ghost" asChild>
                   {/* FIXED: Used template literal for dynamic route */}
                   <Link to={`/job/${job.id}`} className="text-sm font-medium">
@@ -240,7 +247,7 @@ const MobileMenu = ({ mechanicName, shopName, lockScreen, handleLogout, basicNee
               Dashboard
             </Link>
           </Button>
-          {basicNeeds?.status === "WORKING" && job && (
+          {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
             <Button variant="ghost" className="w-full justify-start" asChild>
               {/* FIXED: Used template literal for dynamic route */}
               <Link to={`/job/${job.id}`}>

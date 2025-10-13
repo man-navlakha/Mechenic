@@ -11,7 +11,7 @@ import RightPanel from "../componets/RightPanel";
 export default function JobDetailsPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { job: contextJob, sendJobStatus, clearJob } = useWebSocket();
+    const { job: contextJob, sendJobStatus, clearJob, cancelJob } = useWebSocket();
     const [job, setJob] = useState(contextJob || null);
     const [loading, setLoading] = useState(false);
 
@@ -42,32 +42,51 @@ export default function JobDetailsPage() {
     }
 
     const handleJobAction = async (status) => {
-        const label = status === 'COMPLETED' ? 'mark this job as completed' : 'cancel this job';
-        if (!confirm(`Are you sure you want to ${label}?`)) return;
+        if (status === 'CANCELLED') {
+            const reason = prompt("Please provide a reason for cancellation:");
+            if (reason === null || reason.trim() === "") {
+                // User cancelled the prompt or entered an empty reason
+                return;
+            }
+            setLoading(true);
+            try {
+                await cancelJob(job.id, reason);
+                // The cancelJob function now handles navigation
+            } catch (err) {
+                console.error("Failed to cancel job:", err);
+                alert("Something went wrong with the cancellation. Please try again.");
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            const label = status === 'COMPLETED' ? 'mark this job as completed' : 'cancel this job';
+            if (!confirm(`Are you sure you want to ${label}?`)) return;
 
-        setLoading(true);
+            setLoading(true);
 
-        try {
-            // Send status via WebSocket (or fallback)
-            await sendJobStatus(job.id, status);
+            try {
+                // Send status via WebSocket (or fallback)
+                await sendJobStatus(job.id, status);
 
-            // Update mechanic status
-            const newMechanicStatus = status === "COMPLETED" ? "ONLINE" : "ONLINE";
-            await api.put("jobs/UpdateMechanicStatus/", { status: newMechanicStatus });
+                // Update mechanic status
+                const newMechanicStatus = status === "COMPLETED" ? "ONLINE" : "ONLINE";
+                await api.put("jobs/UpdateMechanicStatus/", { status: newMechanicStatus });
 
-            // Clear job from context/localStorage
-            clearJob();
+                // Clear job from context/localStorage
+                clearJob();
 
-            // Navigate back to dashboard
-          window.location.href = '/';
+                // Navigate back to dashboard
+              window.location.href = '/';
 
-        } catch (err) {
-            console.error("Failed to update job:", err);
-            alert("Something went wrong. Please try again.");
-        } finally {
-            setLoading(false);
+            } catch (err) {
+                console.error("Failed to update job:", err);
+                alert("Something went wrong. Please try again.");
+            } finally {
+                setLoading(false);
+            }
         }
     };
+
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -151,7 +170,6 @@ export default function JobDetailsPage() {
                         </CardContent>
                     </Card>
                 </div>
-                <RightPanel />
             </div>
         </div>
     );

@@ -10,8 +10,9 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const checkAuthentication = async () => {
       try {
-        await api.get("core/me/");
-        setIsAuthenticated(true);
+        const response = await api.get("core/me/");
+setIsAuthenticated(true);
+localStorage.setItem("id", JSON.stringify(response.data.id)); // or response.data
       } catch (error) {
         setIsAuthenticated(false);
       }
