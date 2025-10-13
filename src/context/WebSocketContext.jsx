@@ -155,6 +155,7 @@ export const WebSocketProvider = ({ children }) => {
               (position) => {
                 const { latitude, longitude } = position.coords;
                 console.log(`[Location] Sending update: lat=${latitude}, lon=${longitude}`);
+                localStorage.setItem("locationme", `${latitude},${longitude}`)
                 newSocket.send(JSON.stringify({
                   type: 'location_update',
                   latitude,
@@ -410,13 +411,29 @@ export const WebSocketProvider = ({ children }) => {
 
   const cancelJob = async (jobId, reason) => {
     try {
-        await api.post(`/jobs/CancelServiceRequest/${jobId}/`, { cancellation_reason: basicNeeds?.first +" "+ reason });
+        await api.post(`/jobs/CancelServiceRequest/${jobId}/`, { cancellation_reason: reason });
         console.log("Job cancellation request sent.");
         clearJob();
         navigate('/');
     } catch (error) {
         console.error("Failed to cancel job:", error);
         // Optionally, re-throw or handle the error in the UI
+        throw error;
+    }
+  };
+
+  const completeJob = async (jobId, price) => {
+    try {
+        await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
+        console.log("Job completion request sent.");
+        
+        // Go back to being online after completing a job
+        await updateStatus("ONLINE");
+        
+        clearJob();
+        navigate('/');
+    } catch (error) {
+        console.error("Failed to complete job:", error);
         throw error;
     }
   };
@@ -472,7 +489,8 @@ export const WebSocketProvider = ({ children }) => {
     job,               // expose current job
     sendJobStatus,     // function to send status
     clearJob,          // helper to clear job & localStorage
-    cancelJob, // expose new cancel function
+    cancelJob,
+    completeJob,
   };
 
   return (
