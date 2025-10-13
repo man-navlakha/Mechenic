@@ -194,7 +194,23 @@ export const WebSocketProvider = ({ children }) => {
                 localStorage.removeItem('acceptedJob');
               }
             }
-          } else if (data.type === 'job_expired') {
+          } else if (data.type === 'job_taken') {
+  console.warn(`[WS] Job already taken by another mechanic: ${data.job_id}`);
+  if (job?.id?.toString() === data.job_id?.toString()) {
+    alert('This job has already been taken by another mechanic.');
+    clearTimeout(jobTimeoutRef.current);
+    setJob(null);
+    localStorage.removeItem('acceptedJob');
+  }
+} else if (data.type === 'job_expired') {
+  console.warn(`[WS] Job expired: ${data.job_id}`);
+  if (job?.id?.toString() === data.job_id?.toString()) {
+    clearTimeout(jobTimeoutRef.current);
+    setJob(null);
+    localStorage.removeItem('acceptedJob');
+  }
+}
+else if (data.type === 'job_expired') {
             console.log(`[WS] Job expired: ${data.job_id}`);
             // Only remove popup if the expired job matches the current job
             setJob(prev => (prev?.id?.toString() === data.job_id.toString() ? null : prev));
@@ -211,6 +227,33 @@ export const WebSocketProvider = ({ children }) => {
         }
       };
 
+// Auto-reject or expire job if not accepted within 30 seconds
+useEffect(() => {
+  if (!job || basicNeeds?.status === 'WORKING') return;
+
+  console.log('[Job Timer] Starting 30s auto-reject timer...');
+  clearTimeout(jobTimeoutRef.current);
+
+  jobTimeoutRef.current = setTimeout(() => {
+    console.warn('[Job Timer] Job auto-rejected due to timeout.');
+    setJob(null);
+    localStorage.removeItem('acceptedJob');
+
+    // Optionally send status to backend
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'job_status_update',
+          job_id: job.id.toString(),
+          status: 'REJECTED',
+          reason: 'timeout',
+        })
+      );
+    }
+  }, 30000); // 30 seconds
+
+  return () => clearTimeout(jobTimeoutRef.current);
+}, [job, basicNeeds?.status]);
 
       newSocket.onclose = (event) => {
         console.warn(`[WS] Disconnected. Code: ${event.code}, Reason: ${event.reason}`);
@@ -385,6 +428,7 @@ export const WebSocketProvider = ({ children }) => {
   const handleAcceptJob = async () => {
     if (!job) return;
     try {
+      clearTimeout(jobTimeoutRef.current);
       // Accept job via API
       await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
       console.log("Job accepted via API.");
@@ -475,6 +519,8 @@ export const WebSocketProvider = ({ children }) => {
   const handleRejectJob = () => {
     console.log('Rejected job:', job);
     setJob(null);
+    clearTimeout(jobTimeoutRef.current);
+
   };
 
   const value = {

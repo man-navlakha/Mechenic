@@ -172,8 +172,39 @@ export default function JobDetailsPage() {
         return <div className="flex items-center justify-center h-screen text-gray-400">Loading job details...</div>;
     }
     
-    const handleCompleteJob = async () => { /* ... (implementation unchanged) ... */ };
-    const handleCancelJob = async (reason) => { /* ... (implementation unchanged) ... */ };
+     const handleCompleteJob = async () => {
+        if (loading) return;
+        const priceInput = prompt("Please enter the final price for the service (₹):");
+        if (priceInput === null) return;
+        const price = parseFloat(priceInput);
+        if (isNaN(price) || price < 0) {
+            alert("Please enter a valid, non-negative price.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await completeJob(job.id, price);
+        } catch (err) {
+            console.error("Failed to complete job:", err);
+            alert("Something went wrong while completing the job.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCancelJob = async (reason) => {
+        if (loading) return;
+        setLoading(true);
+        try {
+            await cancelJob(job.id, reason);
+            setIsCancelModalOpen(false);
+        } catch (err) {
+            console.error("Failed to cancel job:", err);
+            alert("Something went wrong with the cancellation.");
+        } finally {
+            setLoading(false);
+        }
+    };
     
     // --- FIX: Corrected the Google Maps URL ---
     const handleNavigate = () => {

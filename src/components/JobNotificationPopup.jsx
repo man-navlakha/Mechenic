@@ -115,6 +115,23 @@ const SwipeToAcceptButton = ({ onAccept }) => {
   );
 };
 
+const CountdownTimer = ({ seconds }) => {
+  const [timeLeft, setTimeLeft] = useState(seconds);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <p className="text-xs text-gray-500 bg-gradient-to-br from-white to-gray-50/80 py-2 rounded-lg backdrop-blur-sm">
+      Auto-reject in <span className="font-semibold text-amber-600">{timeLeft} seconds</span>
+    </p>
+  );
+};
+
 // --- Main Job Notification Component ---
 const JobNotificationPopup = ({ job, onAccept, onReject }) => {
   if (!job) {
@@ -202,9 +219,8 @@ const JobNotificationPopup = ({ job, onAccept, onReject }) => {
             <div className="px-6 pb-6 pt-2">
               <SwipeToAcceptButton onAccept={onAccept} />
               <div className="mt-4 text-center">
-                <p className="text-xs text-gray-500 bg-gradient-to-br from-white to-gray-50/80 py-2 rounded-lg backdrop-blur-sm">
-                  Auto-reject in <span className="font-semibold text-amber-600">29 seconds</span>
-                </p>
+                <CountdownTimer seconds={30} />
+
               </div>
             </div>
           </div>
