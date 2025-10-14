@@ -1,6 +1,6 @@
 import React from 'react'; // Removed unused hooks: useState, useEffect, useRef
 import { Link, useNavigate } from 'react-router-dom';
-import { Wrench, User, Settings, Lock, LogOut, Menu, BadgeCheck } from 'lucide-react'; // Removed unused ChevronDown
+import {User, Lock, LogOut, Menu, BadgeCheck } from 'lucide-react'; // Removed unused ChevronDown
 import { useLock } from '../../context/LockContext';
 import { useWebSocket } from '@/context/WebSocketContext';
 
@@ -97,37 +97,14 @@ const Navbar = () => { // Removed unused {} from props
             <Link to="/" className="flex items-center space-x-3">
               <div>
                 <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                  Mechanic
+                  Setu Partner
                 </span>
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  Setu
-                </Badge>
               </div>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            <nav className="flex items-center space-x-1">
-              <Button variant="ghost" asChild>
-                <Link to="/dashboard" className="text-sm font-medium">
-                  Dashboard
-                </Link>
-              </Button>
-              {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
-                <Button variant="ghost" asChild>
-                  {/* FIXED: Used template literal for dynamic route */}
-                  <Link to={`/job/${job.id}`} className="text-sm font-medium">
-                    Jobs
-                  </Link>
-                </Button>
-              )}
-              <Button variant="ghost" asChild>
-                <Link to="/earnings" className="text-sm font-medium">
-                  Earnings
-                </Link>
-              </Button>
-            </nav>
           </div>
 
           {/* Right Side: User Profile Dropdown */}
@@ -240,7 +217,7 @@ const MobileMenu = ({ mechanicName, shopName, lockScreen, handleLogout, basicNee
 
       {/* Navigation Links */}
       <div className="flex-1 py-4">
-        <nav className="space-y-2">
+        {/* <nav className="space-y-2">
           <Button variant="ghost" className="w-full justify-start" asChild>
             <Link to="/dashboard">
               <Wrench className="mr-2 h-4 w-4" />
@@ -249,23 +226,19 @@ const MobileMenu = ({ mechanicName, shopName, lockScreen, handleLogout, basicNee
           </Button>
           {basicNeeds?.status === "WORKING" && job && (
             <Button variant="ghost" className="w-full justify-start" asChild>
-              {/* FIXED: Used template literal for dynamic route */}
               <Link to={`/job/${job.id}`}>
-                <Wrench className="mr-2 h-4 w-4" />
+                <BriefcaseBusiness className="mr-2 h-4 w-4" />
                 Jobs
               </Link>
             </Button>
           )}
           <Button variant="ghost" className="w-full justify-start" asChild>
             <Link to="/earnings">
-              <Wrench className="mr-2 h-4 w-4" />
+              <IndianRupee className="mr-2 h-4 w-4" />
               Earnings
             </Link>
           </Button>
-        </nav>
-
-        <Separator className="my-4" />
-
+        </nav> */}
         {/* User Menu */}
         <div className="space-y-2">
           <Button variant="ghost" className="w-full justify-start" asChild>

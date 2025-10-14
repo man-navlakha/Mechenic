@@ -67,13 +67,13 @@ const Profile = () => {
       case 'home':
         return <HomeOverview profile={profileData} onNavigate={handleSectionChange} />;
       case 'personalInfo':
-        return <PersonalInfo profile={profileData}  onNavigate={handleSectionChange} />;
+        return <PersonalInfo profile={profileData} onNavigate={handleSectionChange} />;
       case 'shopInfo':
-        return <ShopInfo profile={profileData}  onNavigate={handleSectionChange} />;
+        return <ShopInfo profile={profileData} onNavigate={handleSectionChange} />;
       case 'earnings':
-        return <Earnings stats={historyData?.statistics} onNavigate={handleSectionChange}  />;
+        return <Earnings stats={historyData?.statistics} onNavigate={handleSectionChange} />;
       case 'jobHistory':
-        return <JobHistory jobs={historyData?.job_history} onNavigate={handleSectionChange}  />;
+        return <JobHistory jobs={historyData?.job_history} onNavigate={handleSectionChange} />;
       default:
         return <HomeOverview profile={profileData} onNavigate={handleSectionChange} />;
     }
@@ -298,25 +298,39 @@ const PersonalInfo = ({ profile, onNavigate }) => {
           <div className="space-y-2">
             <Label htmlFor="kyc_document" className="text-sm">KYC Document</Label>
             <Input id="kyc_document" defaultValue={profile.KYC_document} disabled className="text-sm md:text-base" />
+
           </div>
           <div className="space-y-2">
             <Label htmlFor="verified" className="text-sm">Verified</Label>
             <Switch id="verified" checked={profile.is_verified} disabled />
           </div>
+
         </div>
-        
+          <div className="space-y-2">
+            <Label>KYC Document</Label>
+            <div className="border rounded-md overflow-hidden h-[400px]">
+              <iframe
+                src={profile.KYC_document}
+                title="KYC Document"
+                width="100%"
+                height="100%"
+                className="rounded"
+              />
+            </div>
+          </div>
+
       </CardContent>
     </Card>
   );
 };
 
-const ShopInfo = ({ profile,onNavigate }) => {
+const ShopInfo = ({ profile, onNavigate }) => {
   const [isEditing, setIsEditing] = useState(false);
   if (!profile) return null;
   return (
     <Card>
       <CardHeader className="px-4 md:px-6 py-4 md:py-6">
-          <div className='flex items-center gap-2 p-2 w-full text-sm  '
+        <div className='flex items-center gap-2 p-2 w-full text-sm  '
           onClick={() => onNavigate('HomeOverview')}
         >
           <ArrowLeft className="text-purple-600 " size={18} /> Go Back
@@ -361,11 +375,11 @@ const ShopInfo = ({ profile,onNavigate }) => {
 const Earnings = ({ stats, onNavigate }) => (
   <Card>
     <CardHeader className="px-4 md:px-6 py-4 md:py-6">
-        <div className='flex items-center gap-2 p-2 w-full text-sm  '
-          onClick={() => onNavigate('HomeOverview')}
-        >
-          <ArrowLeft className="text-purple-600 " size={18} /> Go Back
-        </div>
+      <div className='flex items-center gap-2 p-2 w-full text-sm  '
+        onClick={() => onNavigate('HomeOverview')}
+      >
+        <ArrowLeft className="text-purple-600 " size={18} /> Go Back
+      </div>
       <CardTitle className="text-lg md:text-xl">Earnings Overview</CardTitle>
       <CardDescription className="text-sm md:text-base">View your earnings and financial summary</CardDescription>
     </CardHeader>
@@ -405,11 +419,11 @@ const Earnings = ({ stats, onNavigate }) => (
 const JobHistory = ({ jobs, onNavigate }) => (
   <Card>
     <CardHeader className="px-4 md:px-6 py-4 md:py-6">
-        <div className='flex items-center gap-2 p-2 w-full text-sm  '
-          onClick={() => onNavigate('HomeOverview')}
-        >
-          <ArrowLeft className="text-purple-600 " size={18} /> Go Back
-        </div>
+      <div className='flex items-center gap-2 p-2 w-full text-sm  '
+        onClick={() => onNavigate('HomeOverview')}
+      >
+        <ArrowLeft className="text-purple-600 " size={18} /> Go Back
+      </div>
       <CardTitle className="text-lg md:text-xl">Job History</CardTitle>
       <CardDescription className="text-sm md:text-base">Review your completed jobs and earnings</CardDescription>
     </CardHeader>
