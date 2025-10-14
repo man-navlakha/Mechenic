@@ -247,7 +247,7 @@ const MobileMenu = ({ mechanicName, shopName, lockScreen, handleLogout, basicNee
               Dashboard
             </Link>
           </Button>
-          {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
+          {basicNeeds?.status === "WORKING" && job && (
             <Button variant="ghost" className="w-full justify-start" asChild>
               {/* FIXED: Used template literal for dynamic route */}
               <Link to={`/job/${job.id}`}>
