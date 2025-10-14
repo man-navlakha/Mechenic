@@ -22,6 +22,8 @@ import { WebSocketProvider } from './context/WebSocketContext';
 import MechanicVerification from './mechanic/componets/admin/MechanicVerification';
 import LegalPages from './mechanic/page/LegalPages';
 import JobDetailsPage from "@/mechanic/page/JobDetailsPage";
+import UnverifiedPage from './components/UnverifiedPage';
+import EarningsSummary from './components/EarningsSummary';
 
 
 
@@ -90,6 +92,16 @@ const AppContent = () => {
           <Route path="/legal" element={
 
             <LegalPages />
+
+          } />
+          <Route path="/un" element={
+
+            <UnverifiedPage />
+
+          } />
+          <Route path="/job_completed" element={
+
+            <EarningsSummary />
 
           } />
 

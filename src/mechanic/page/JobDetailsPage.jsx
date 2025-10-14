@@ -1,27 +1,30 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useWebSocket } from "@/context/WebSocketContext";
+
+import { useNavigate } from 'react-router-dom';
+import { useLocation } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import api from '@/utils/api';
-import { MapPin, Phone, Car, Navigation, Check, X, SquareX, Loader2 } from "lucide-react"; 
+import { MapPin, Phone, Car, Navigation, Check, X, SquareX, Loader2 } from "lucide-react";
 import Navbar from "../componets/Navbar";
 
 // --- START: Reusable SwipeButton Component (Unchanged) ---
 const SwipeButton = ({ onSwipeSuccess, text = "Swipe to Action", successText = "Success!", Icon, gradientColors = { from: "from-gray-500", to: "to-gray-600" }, iconColor = "text-gray-600", disabled = false, }) => {
-  const [sliderLeft, setSliderLeft] = useState(0); const [isDragging, setIsDragging] = useState(false); const [isSuccess, setIsSuccess] = useState(false); const containerRef = useRef(null); const sliderRef = useRef(null); const startXRef = useRef(0);
-  useEffect(() => { if (disabled) { setIsSuccess(false); setSliderLeft(0); } }, [disabled]);
-  const handleDragStart = useCallback((e) => { if (isSuccess || disabled) return; setIsDragging(true); const clientX = e.type === 'touchstart' ? e.touches[0].pageX : e.pageX; if (sliderRef.current) { startXRef.current = clientX - sliderRef.current.getBoundingClientRect().left; } document.body.classList.add('no-select'); }, [isSuccess, disabled]);
-  const handleDragMove = useCallback((e) => { if (!isDragging || isSuccess || disabled) return; const clientX = e.type === 'touchmove' ? e.touches[0].pageX : e.pageX; if (containerRef.current && sliderRef.current) { const containerRect = containerRef.current.getBoundingClientRect(); const sliderWidth = sliderRef.current.offsetWidth; let newLeft = clientX - containerRect.left - startXRef.current; const maxLeft = containerRect.width - sliderWidth; newLeft = Math.max(0, Math.min(newLeft, maxLeft)); setSliderLeft(newLeft); } }, [isDragging, isSuccess, disabled]);
-  const handleDragEnd = useCallback(() => { if (!isDragging) return; setIsDragging(false); document.body.classList.remove('no-select'); if (containerRef.current && sliderRef.current) { const containerWidth = containerRef.current.offsetWidth; const sliderWidth = sliderRef.current.offsetWidth; const threshold = (containerWidth - sliderWidth) * 0.85; if (sliderLeft >= threshold) { setSliderLeft(containerWidth - sliderWidth); setIsSuccess(true); setTimeout(() => onSwipeSuccess(), 300); } else { setSliderLeft(0); } } }, [isDragging, sliderLeft, onSwipeSuccess]);
-  useEffect(() => { const moveHandler = (e) => handleDragMove(e); const endHandler = () => handleDragEnd(); if (isDragging) { window.addEventListener('mousemove', moveHandler); window.addEventListener('touchmove', moveHandler); window.addEventListener('mouseup', endHandler); window.addEventListener('touchend', endHandler); } return () => { window.removeEventListener('mousemove', moveHandler); window.removeEventListener('touchmove', moveHandler); window.removeEventListener('mouseup', endHandler); window.removeEventListener('touchend', endHandler); }; }, [isDragging, handleDragMove, handleDragEnd]);
-  return (<> <div ref={containerRef} className={`relative w-full h-[54px] rounded-xl flex items-center justify-center overflow-hidden border select-none mt-2 ${disabled ? 'bg-gray-300/80 border-gray-400 cursor-not-allowed opacity-70' : 'bg-gray-200/70 border-gray-300'}`}> <div className={`absolute top-0 left-0 h-full bg-gradient-to-r ${gradientColors.from} ${gradientColors.to} rounded-xl`} style={{ width: `${sliderLeft + (sliderRef.current?.offsetWidth || 60)}px` }} /> <div ref={sliderRef} className={`absolute top-1/2 -translate-y-1/2 h-[46px] w-[60px] flex items-center justify-center rounded-lg shadow-md bg-white ${disabled ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}`} style={{ left: `${sliderLeft}px`, transition: isDragging ? 'none' : 'left 0.2s ease-out' }} onMouseDown={handleDragStart} onTouchStart={handleDragStart}> {isSuccess ? <Check className={`w-6 h-6 ${iconColor}`} /> : <Icon className="w-6 h-6 text-gray-500 animate-pulse" />} </div> <span className={`font-semibold transition-opacity duration-300 ${isSuccess ? 'text-white' : 'text-gray-600'} ${sliderLeft > 20 && !isSuccess ? 'opacity-0' : 'opacity-100'}`}> {isSuccess ? successText : text} </span> </div> <style>{`.no-select {-webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}`}</style> </>);
+    const [sliderLeft, setSliderLeft] = useState(0); const [isDragging, setIsDragging] = useState(false); const [isSuccess, setIsSuccess] = useState(false); const containerRef = useRef(null); const sliderRef = useRef(null); const startXRef = useRef(0);
+    useEffect(() => { if (disabled) { setIsSuccess(false); setSliderLeft(0); } }, [disabled]);
+    const handleDragStart = useCallback((e) => { if (isSuccess || disabled) return; setIsDragging(true); const clientX = e.type === 'touchstart' ? e.touches[0].pageX : e.pageX; if (sliderRef.current) { startXRef.current = clientX - sliderRef.current.getBoundingClientRect().left; } document.body.classList.add('no-select'); }, [isSuccess, disabled]);
+    const handleDragMove = useCallback((e) => { if (!isDragging || isSuccess || disabled) return; const clientX = e.type === 'touchmove' ? e.touches[0].pageX : e.pageX; if (containerRef.current && sliderRef.current) { const containerRect = containerRef.current.getBoundingClientRect(); const sliderWidth = sliderRef.current.offsetWidth; let newLeft = clientX - containerRect.left - startXRef.current; const maxLeft = containerRect.width - sliderWidth; newLeft = Math.max(0, Math.min(newLeft, maxLeft)); setSliderLeft(newLeft); } }, [isDragging, isSuccess, disabled]);
+    const handleDragEnd = useCallback(() => { if (!isDragging) return; setIsDragging(false); document.body.classList.remove('no-select'); if (containerRef.current && sliderRef.current) { const containerWidth = containerRef.current.offsetWidth; const sliderWidth = sliderRef.current.offsetWidth; const threshold = (containerWidth - sliderWidth) * 0.85; if (sliderLeft >= threshold) { setSliderLeft(containerWidth - sliderWidth); setIsSuccess(true); setTimeout(() => onSwipeSuccess(), 300); } else { setSliderLeft(0); } } }, [isDragging, sliderLeft, onSwipeSuccess]);
+    useEffect(() => { const moveHandler = (e) => handleDragMove(e); const endHandler = () => handleDragEnd(); if (isDragging) { window.addEventListener('mousemove', moveHandler); window.addEventListener('touchmove', moveHandler); window.addEventListener('mouseup', endHandler); window.addEventListener('touchend', endHandler); } return () => { window.removeEventListener('mousemove', moveHandler); window.removeEventListener('touchmove', moveHandler); window.removeEventListener('mouseup', endHandler); window.removeEventListener('touchend', endHandler); }; }, [isDragging, handleDragMove, handleDragEnd]);
+    return (<> <div ref={containerRef} className={`relative w-full h-[54px] rounded-xl flex items-center justify-center overflow-hidden border select-none mt-2 ${disabled ? 'bg-gray-300/80 border-gray-400 cursor-not-allowed opacity-70' : 'bg-gray-200/70 border-gray-300'}`}> <div className={`absolute top-0 left-0 h-full bg-gradient-to-r ${gradientColors.from} ${gradientColors.to} rounded-xl`} style={{ width: `${sliderLeft + (sliderRef.current?.offsetWidth || 60)}px` }} /> <div ref={sliderRef} className={`absolute top-1/2 -translate-y-1/2 h-[46px] w-[60px] flex items-center justify-center rounded-lg shadow-md bg-white ${disabled ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}`} style={{ left: `${sliderLeft}px`, transition: isDragging ? 'none' : 'left 0.2s ease-out' }} onMouseDown={handleDragStart} onTouchStart={handleDragStart}> {isSuccess ? <Check className={`w-6 h-6 ${iconColor}`} /> : <Icon className="w-6 h-6 text-gray-500 animate-pulse" />} </div> <span className={`font-semibold transition-opacity duration-300 ${isSuccess ? 'text-white' : 'text-gray-600'} ${sliderLeft > 20 && !isSuccess ? 'opacity-0' : 'opacity-100'}`}> {isSuccess ? successText : text} </span> </div> <style>{`.no-select {-webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;}`}</style> </>);
 };
 
 // --- START: Cancellation Modal Component (Unchanged) ---
 const CancelJobModal = ({ isOpen, onClose, onSelectReason, loading }) => {
-  if (!isOpen) return null; const reasons = [ { text: "Customer requested to cancel", icon: Phone }, { text: "Unable to reach customer", icon: X }, { text: "I'm not available at this time", icon: MapPin }, { text: "Other (Please specify)", icon: SquareX }, ];
-  const handleSwipe = (reasonText) => { if (loading) return; if (reasonText.startsWith("Other")) { const customReason = prompt("Please provide a specific reason for cancellation:"); if (customReason && customReason.trim() !== "") onSelectReason(customReason); } else { onSelectReason(reasonText); } };
-  return (<div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/60 backdrop-blur-sm"> <div className="relative z-[3001] w-full max-w-md bg-white rounded-t-2xl p-6 shadow-2xl"> <div className="flex justify-between items-center mb-4"> <h2 className="text-xl font-bold text-gray-800">Reason for Cancellation</h2> <button onClick={onClose} disabled={loading} className="p-1 rounded-full hover:bg-gray-200"><X className="w-6 h-6 text-gray-600" /></button> </div> <div className="space-y-2"> {reasons.map((reason) => <SwipeButton key={reason.text} onSwipeSuccess={() => handleSwipe(reason.text)} text={reason.text} successText="Submitting..." Icon={reason.icon} gradientColors={{ from: 'from-red-500', to: 'to-red-600' }} iconColor="text-red-600" disabled={loading} />)} </div> </div> </div>);
+    if (!isOpen) return null; const reasons = [{ text: "Customer requested to cancel", icon: Phone }, { text: "Unable to reach customer", icon: X }, { text: "I'm not available at this time", icon: MapPin }, { text: "Other (Please specify)", icon: SquareX },];
+    const handleSwipe = (reasonText) => { if (loading) return; if (reasonText.startsWith("Other")) { const customReason = prompt("Please provide a specific reason for cancellation:"); if (customReason && customReason.trim() !== "") onSelectReason(customReason); } else { onSelectReason(reasonText); } };
+    return (<div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/60 backdrop-blur-sm"> <div className="relative z-[3001] w-full max-w-md bg-white rounded-t-2xl p-6 shadow-2xl"> <div className="flex justify-between items-center mb-4"> <h2 className="text-xl font-bold text-gray-800">Reason for Cancellation</h2> <button onClick={onClose} disabled={loading} className="p-1 rounded-full hover:bg-gray-200"><X className="w-6 h-6 text-gray-600" /></button> </div> <div className="space-y-2"> {reasons.map((reason) => <SwipeButton key={reason.text} onSwipeSuccess={() => handleSwipe(reason.text)} text={reason.text} successText="Submitting..." Icon={reason.icon} gradientColors={{ from: 'from-red-500', to: 'to-red-600' }} iconColor="text-red-600" disabled={loading} />)} </div> </div> </div>);
 };
 
 // --- START: Haversine distance calculation utility (Unchanged) ---
@@ -37,6 +40,8 @@ export default function JobDetailsPage() {
     const [distanceFromJob, setDistanceFromJob] = useState(null);
     const [mechanicCurrentLocation, setMechanicCurrentLocation] = useState(null);
 
+  const navigate = useNavigate();
+  const location = useLocation();
     const mapContainerRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const mechanicMarkerRef = useRef(null);
@@ -126,14 +131,14 @@ export default function JobDetailsPage() {
 
         const initializeMap = () => {
             if (!window.maplibregl || !mapContainerRef.current) return;
-            
+
             const map = new window.maplibregl.Map({
                 container: mapContainerRef.current,
                 center: [lng, lat],
                 zoom: 13,
                 style: `https://api.maptiler.com/maps/streets/style.json?key=wf1HtIzvVsvPfvNrhwPz`,
             });
-            
+
             mapInstanceRef.current = map;
 
             // IMPORTANT: Only add markers after the map has fully loaded
@@ -171,8 +176,8 @@ export default function JobDetailsPage() {
     if (!job) {
         return <div className="flex items-center justify-center h-screen text-gray-400">Loading job details...</div>;
     }
-    
-     const handleCompleteJob = async () => {
+
+    const handleCompleteJob = async () => {
         if (loading) return;
         const priceInput = prompt("Please enter the final price for the service (₹):");
         if (priceInput === null) return;
@@ -189,6 +194,16 @@ export default function JobDetailsPage() {
             alert("Something went wrong while completing the job.");
         } finally {
             setLoading(false);
+           localStorage.setItem("job_comp", JSON.stringify({
+  id: job.id,
+  price,
+  first_name: job.first_name,
+  last_name: job.last_name,
+  vehicle_type: job.vehical_type,
+  problem: job.problem,
+}));
+
+            navigate('/job_completed/');
         }
     };
 
@@ -205,7 +220,7 @@ export default function JobDetailsPage() {
             setLoading(false);
         }
     };
-    
+
     // --- FIX: Corrected the Google Maps URL ---
     const handleNavigate = () => {
         const lat = parseFloat(job?.latitude);
@@ -233,9 +248,9 @@ export default function JobDetailsPage() {
                     </Card>
 
                     <Card className="shadow-md border border-gray-200 overflow-hidden">
-                       <div ref={mapContainerRef} className="w-full h-64 md:h-80 bg-gray-200" />
+                        <div ref={mapContainerRef} className="w-full h-64 md:h-80 bg-gray-200" />
                     </Card>
-                    
+
                     <Card className="shadow-md border border-gray-200">
                         <CardContent className="space-y-6 pt-6">
                             <div className="flex items-center gap-4">
@@ -267,7 +282,7 @@ export default function JobDetailsPage() {
                     </Card>
 
                     <Card className="shadow-sm border border-gray-200">
-                         <CardContent className="p-4">
+                        <CardContent className="p-4">
                             {distanceFromJob === null && (
                                 <div className="text-center p-4 bg-gray-100 rounded-lg text-gray-600 flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /><span>Checking your distance from the job...</span></div>
                             )}
@@ -277,14 +292,14 @@ export default function JobDetailsPage() {
                             {distanceFromJob !== null && !isNearJob && (
                                 <div className="text-center p-4 bg-amber-100 rounded-lg text-amber-800 font-semibold border border-amber-200">
                                     You must be within 500m to complete the job.
-                                    <div className="text-sm font-normal">Current Distance: { (distanceFromJob * 1000).toFixed(0) } meters away</div>
+                                    <div className="text-sm font-normal">Current Distance: {(distanceFromJob * 1000).toFixed(0)} meters away</div>
                                 </div>
                             )}
                         </CardContent>
                     </Card>
                 </div>
             </div>
-            
+
             <CancelJobModal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} onSelectReason={handleCancelJob} loading={loading} />
         </div>
     );

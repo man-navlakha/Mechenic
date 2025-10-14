@@ -4,6 +4,7 @@ import JobNotificationPopup from '@/components/JobNotificationPopup';
 import JobInProgress from '@/components/JobInProgress';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
+import UnverifiedPage from '@/components/UnverifiedPage';
 
 
 
@@ -574,11 +575,16 @@ useEffect(() => {
   };
 
   return (
-    <WebSocketContext.Provider value={value}>
+
+     <WebSocketContext.Provider value={value}>
+    {!isVerified ? (
+      <UnverifiedPage />
+    ) : (
+      <>
       {children}
 
       {/* Debug panel */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-19 left-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
           <div><strong>WebSocket Debug</strong></div>
           <div>Status: <span className={
@@ -607,7 +613,7 @@ useEffect(() => {
             Log State
           </button>
         </div>
-      )}
+      )} */}
       {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
         <div className="fixed top-0 left-0 right-0 z-40 bg-blue-600 text-white flex items-center justify-between px-4 py-3 shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -631,7 +637,8 @@ useEffect(() => {
         />
       )}
 
-
+    </>
+    )}
 
     </WebSocketContext.Provider>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api'; 
+import Cookies from 'js-cookie';
 
 const Logout = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const Logout = () => {
         // Clear any client-side auth state/storage
         localStorage.clear();
         sessionStorage.clear();
+        Cookies.clear();
         navigate('/', { replace: true });
       }
     };

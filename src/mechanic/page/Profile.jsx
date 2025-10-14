@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  User, Shield, Lock, DollarSign, History, Car, Bell, Home,
-  ChevronRight, Wrench, ArrowLeft, Mail, Phone, MapPin, Calendar,
-  CheckCircle, Menu, Store
+  User, DollarSign, History, Home, ArrowLeft, Mail, Calendar, Menu, Store
 } from 'lucide-react';
 
 // Shadcn/ui components
