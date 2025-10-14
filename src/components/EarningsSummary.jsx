@@ -38,7 +38,7 @@ const EarningsSummary = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-2 mt-6 text-sm text-white">
+                    <div className="space-y-2 mt-6 text-md text-white">
                         <div><span className="text-gray-400">Job ID:</span> {jobData?.id}</div>
                         <div><span className="text-gray-400">Customer:</span> {jobData?.first_name} {jobData?.last_name}</div>
                         <div><span className="text-gray-400">Vehicle Type:</span> {jobData?.vehicle_type}</div>
@@ -53,6 +53,7 @@ const EarningsSummary = () => {
                     className="w-full bg-orange-600 hover:bg-orange-700 text-white text-md rounded-md"
                     onClick={() => {
                         localStorage.removeItem("job_comp");
+                        localStorage.removeItem("acceptedJob");
                         window.location.href = "/";
                     }}
                 >

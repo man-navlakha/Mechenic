@@ -96,7 +96,7 @@ const Navbar = () => { // Removed unused {} from props
 
             <Link to="/" className="flex items-center space-x-3">
               <div>
-                <span className="text-xl font-bold bg-gradient-to-t from-blue-500 via-teal-500 to-orange-500 text-transparent bg-clip-text">
+                <span className="text-2xl font-black bg-gradient-to-b from-gray-300 to-slate-400 text-transparent bg-clip-text">
                   Setu Partner
                 </span>
               </div>
