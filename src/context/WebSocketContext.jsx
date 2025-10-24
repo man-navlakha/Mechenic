@@ -21,7 +21,6 @@ export const WebSocketProvider = ({ children }) => {
 
 
 
-
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -36,21 +35,26 @@ export const WebSocketProvider = ({ children }) => {
   const isOnJobPage =
     location.pathname.startsWith("/job/") ||
     location.pathname.startsWith("/login");
+  // ADD THESE TWO LINES:
+  const publicRoutes = ['/login', '/logout', '/form']; // Add any other public routes
+  const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route));
 
 
   const userInteracted = useRef(false);
 
-useEffect(() => {
-  const markInteracted = () => { userInteracted.current = true; };
-  window.addEventListener('click', markInteracted, { once: true });
-  window.addEventListener('keydown', markInteracted, { once: true });
-  window.addEventListener('touchstart', markInteracted, { once: true });
-  return () => {
-    window.removeEventListener('click', markInteracted);
-    window.removeEventListener('keydown', markInteracted);
-    window.removeEventListener('touchstart', markInteracted);
-  };
-}, []);
+
+
+  useEffect(() => {
+    const markInteracted = () => { userInteracted.current = true; };
+    window.addEventListener('click', markInteracted, { once: true });
+    window.addEventListener('keydown', markInteracted, { once: true });
+    window.addEventListener('touchstart', markInteracted, { once: true });
+    return () => {
+      window.removeEventListener('click', markInteracted);
+      window.removeEventListener('keydown', markInteracted);
+      window.removeEventListener('touchstart', markInteracted);
+    };
+  }, []);
 
 
   const updateStatus = async (status) => {
@@ -100,145 +104,145 @@ useEffect(() => {
   }, []);
 
   const connectWebSocket = async () => {
-  if (socketRef.current && [WebSocket.OPEN, WebSocket.CONNECTING].includes(socketRef.current.readyState)) {
-    console.log("WebSocket already active, skipping reconnect.");
-    return;
-  }
+    if (socketRef.current && [WebSocket.OPEN, WebSocket.CONNECTING].includes(socketRef.current.readyState)) {
+      console.log("WebSocket already active, skipping reconnect.");
+      return;
+    }
 
-  console.log("Connecting to WebSocket...");
-  setConnectionStatus('connecting');
+    console.log("Connecting to WebSocket...");
+    setConnectionStatus('connecting');
 
-  try {
-    const res = await api.get("core/ws-token/", { withCredentials: true });
-    const wsToken = res.data.ws_token;
-    if (!wsToken) throw new Error("Missing WebSocket token");
+    try {
+      const res = await api.get("core/ws-token/", { withCredentials: true });
+      const wsToken = res.data.ws_token;
+      if (!wsToken) throw new Error("Missing WebSocket token");
 
-    const isProduction = import.meta.env.PROD;
-    const wsScheme = isProduction ? "wss" : "ws";
-    const backendHost = isProduction
-      ? (import.meta.env.VITE_BACKEND_HOST || 'mechanic-setu.onrender.com').replace(/^https?:\/\//, '')
-      : window.location.host;
+      const isProduction = import.meta.env.PROD;
+      const wsScheme = isProduction ? "wss" : "ws";
+      const backendHost = isProduction
+        ? (import.meta.env.VITE_BACKEND_HOST || 'mechanic-setu.onrender.com').replace(/^https?:\/\//, '')
+        : window.location.host;
 
-    const wsUrl = `${wsScheme}://${backendHost}/ws/job_notifications/?token=${wsToken}`;
-    console.log("WS URL:", wsUrl);
+      const wsUrl = `${wsScheme}://${backendHost}/ws/job_notifications/?token=${wsToken}`;
+      console.log("WS URL:", wsUrl);
 
-    const ws = new WebSocket(wsUrl);
-    socketRef.current = ws;
+      const ws = new WebSocket(wsUrl);
+      socketRef.current = ws;
 
-    ws.onopen = () => {
-      console.log("%c[WS] Connected!", "color: limegreen;");
-      setConnectionStatus('connected');
-      reconnectAttempts.current = 0;
-      setSocket(ws);
+      ws.onopen = () => {
+        console.log("%c[WS] Connected!", "color: limegreen;");
+        setConnectionStatus('connected');
+        reconnectAttempts.current = 0;
+        setSocket(ws);
 
-      // Send location immediately + every minute
-      const sendLocation = () => {
-        if (ws.readyState === WebSocket.OPEN) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const { latitude, longitude } = pos.coords;
-              ws.send(JSON.stringify({ type: "location_update", latitude, longitude }));
-            },
-            (err) => console.error("Location error:", err.message),
-            { enableHighAccuracy: true }
-          );
+        // Send location immediately + every minute
+        const sendLocation = () => {
+          if (ws.readyState === WebSocket.OPEN) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const { latitude, longitude } = pos.coords;
+                ws.send(JSON.stringify({ type: "location_update", latitude, longitude }));
+              },
+              (err) => console.error("Location error:", err.message),
+              { enableHighAccuracy: true }
+            );
+          }
+        };
+        sendLocation();
+        locationInterval.current = setInterval(sendLocation, 60000);
+      };
+
+      ws.onmessage = (event) => {
+        console.log("[WS] Received:", event.data);
+        try {
+          const data = JSON.parse(event.data);
+
+          switch (data.type) {
+            case "new_job":
+              if (data.service_request) {
+                console.log("[WS] New job received:", data.service_request);
+                window.dispatchEvent(
+                  new CustomEvent("newJobAvailable", { detail: data.service_request })
+                );
+              }
+              break;
+
+            case "job_update":
+            case "job_status_update":
+              if (data.job) setJob(data.job);
+              break;
+
+            case "job_taken":
+              if (job?.id?.toString() === data.job_id?.toString()) {
+                alert("This job was taken by another mechanic.");
+                clearJob();
+              }
+              break;
+
+            case "job_expired":
+            case "job_cancelled":
+              if (job?.id?.toString() === data.job_id?.toString()) {
+                clearJob();
+                if (data.type === "job_cancelled") alert(`Job cancelled: ${data.message}`);
+              }
+              break;
+
+            default:
+              console.log("[WS] Unhandled type:", data.type);
+          }
+        } catch (err) {
+          console.error("[WS] Parse error:", err);
         }
       };
-      sendLocation();
-      locationInterval.current = setInterval(sendLocation, 60000);
-    };
 
-    ws.onmessage = (event) => {
-      console.log("[WS] Received:", event.data);
-      try {
-        const data = JSON.parse(event.data);
+      ws.onclose = (e) => {
+        console.warn("[WS] Closed:", e.code, e.reason);
+        setSocket(null);
+        setConnectionStatus("disconnected");
 
-        switch (data.type) {
-          case "new_job":
-            if (data.service_request) {
-              console.log("[WS] New job received:", data.service_request);
-              window.dispatchEvent(
-                new CustomEvent("newJobAvailable", { detail: data.service_request })
-              );
-            }
-            break;
+        clearInterval(locationInterval.current);
+        locationInterval.current = null;
 
-          case "job_update":
-          case "job_status_update":
-            if (data.job) setJob(data.job);
-            break;
-
-          case "job_taken":
-            if (job?.id?.toString() === data.job_id?.toString()) {
-              alert("This job was taken by another mechanic.");
-              clearJob();
-            }
-            break;
-
-          case "job_expired":
-          case "job_cancelled":
-            if (job?.id?.toString() === data.job_id?.toString()) {
-              clearJob();
-              if (data.type === "job_cancelled") alert(`Job cancelled: ${data.message}`);
-            }
-            break;
-
-          default:
-            console.log("[WS] Unhandled type:", data.type);
+        if (intendedOnlineState.current && reconnectAttempts.current < maxReconnectAttempts) {
+          reconnectAttempts.current += 1;
+          const delay = Math.min(3000 * reconnectAttempts.current, 30000);
+          console.log(`Reconnect attempt ${reconnectAttempts.current} in ${delay}ms`);
+          setTimeout(connectWebSocket, delay);
         }
-      } catch (err) {
-        console.error("[WS] Parse error:", err);
-      }
-    };
+      };
 
-    ws.onclose = (e) => {
-      console.warn("[WS] Closed:", e.code, e.reason);
-      setSocket(null);
-      setConnectionStatus("disconnected");
-
-      clearInterval(locationInterval.current);
-      locationInterval.current = null;
-
-      if (intendedOnlineState.current && reconnectAttempts.current < maxReconnectAttempts) {
-        reconnectAttempts.current += 1;
-        const delay = Math.min(3000 * reconnectAttempts.current, 30000);
-        console.log(`Reconnect attempt ${reconnectAttempts.current} in ${delay}ms`);
-        setTimeout(connectWebSocket, delay);
-      }
-    };
-
-    ws.onerror = (err) => {
-      console.error("[WS] Error:", err);
+      ws.onerror = (err) => {
+        console.error("[WS] Error:", err);
+        setConnectionStatus("error");
+      };
+    } catch (err) {
+      console.error("[WS] Failed to connect:", err);
       setConnectionStatus("error");
-    };
-  } catch (err) {
-    console.error("[WS] Failed to connect:", err);
-    setConnectionStatus("error");
-  }
-};
-
-useEffect(() => {
-  if (!job || basicNeeds?.status === 'WORKING') return;
-
-  console.log('[Job Timer] Starting 30s auto-reject timer...');
-  clearTimeout(jobTimeoutRef.current);
-
-  jobTimeoutRef.current = setTimeout(() => {
-    console.warn('[Job Timer] Job auto-rejected (timeout).');
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({
-        type: 'job_status_update',
-        job_id: job.id,
-        status: 'REJECTED',
-        reason: 'timeout',
-      }));
     }
-    setJob(null);
-    localStorage.removeItem('acceptedJob');
-  }, 30000);
+  };
 
-  return () => clearTimeout(jobTimeoutRef.current);
-}, [job, basicNeeds?.status]);
+  useEffect(() => {
+    if (!job || basicNeeds?.status === 'WORKING') return;
+
+    console.log('[Job Timer] Starting 30s auto-reject timer...');
+    clearTimeout(jobTimeoutRef.current);
+
+    jobTimeoutRef.current = setTimeout(() => {
+      console.warn('[Job Timer] Job auto-rejected (timeout).');
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({
+          type: 'job_status_update',
+          job_id: job.id,
+          status: 'REJECTED',
+          reason: 'timeout',
+        }));
+      }
+      setJob(null);
+      localStorage.removeItem('acceptedJob');
+    }, 30000);
+
+    return () => clearTimeout(jobTimeoutRef.current);
+  }, [job, basicNeeds?.status]);
 
   const disconnectWebSocket = () => {
     console.log("Disconnecting WebSocket...");
@@ -292,24 +296,24 @@ useEffect(() => {
   };
 
 
-const handleNewJob = (event) => {
-  const jobData = event.detail;
-  console.log("New job available:", jobData);
-  setJob(jobData);
+  const handleNewJob = (event) => {
+    const jobData = event.detail;
+    console.log("New job available:", jobData);
+    setJob(jobData);
 
-  // Only play sound if user has interacted with the page
-  if (userInteracted.current) {
-    const sound = new Audio('/sounds/alert-33762.mp3');
-    sound.volume = 0.5;
-    sound.currentTime = 0;
+    // Only play sound if user has interacted with the page
+    if (userInteracted.current) {
+      const sound = new Audio('/sounds/alert-33762.mp3');
+      sound.volume = 0.5;
+      sound.currentTime = 0;
 
-    sound.play().catch((err) => {
-      console.warn("Audio play failed:", err);
-    });
-  } else {
-    console.log("User not interacted yet — skipping sound play.");
-  }
-};
+      sound.play().catch((err) => {
+        console.warn("Audio play failed:", err);
+      });
+    } else {
+      console.log("User not interacted yet — skipping sound play.");
+    }
+  };
 
 
 
@@ -367,79 +371,79 @@ const handleNewJob = (event) => {
     };
   }, [isVerified]);
 
-useEffect(() => {
-  const unlockAudio = () => {
-    if (jobNotificationSound.current) {
-      jobNotificationSound.current.play()
-        .then(() => {
-          jobNotificationSound.current.pause();
-          jobNotificationSound.current.currentTime = 0;
-          console.log("Audio unlocked ✅");
-        })
-        .catch(() => {});
-    }
-    window.removeEventListener('click', unlockAudio);
-  };
-  window.addEventListener('click', unlockAudio);
-  return () => window.removeEventListener('click', unlockAudio);
-}, []);
+  useEffect(() => {
+    const unlockAudio = () => {
+      if (jobNotificationSound.current) {
+        jobNotificationSound.current.play()
+          .then(() => {
+            jobNotificationSound.current.pause();
+            jobNotificationSound.current.currentTime = 0;
+            console.log("Audio unlocked ✅");
+          })
+          .catch(() => { });
+      }
+      window.removeEventListener('click', unlockAudio);
+    };
+    window.addEventListener('click', unlockAudio);
+    return () => window.removeEventListener('click', unlockAudio);
+  }, []);
 
   // Modified handleAcceptJob function
- const handleAcceptJob = async () => {
-  if (!job) return;
+  const handleAcceptJob = async () => {
+    if (!job) return;
 
-  try {
-    // Immediately stop auto-reject timer
-    clearTimeout(jobTimeoutRef.current);
+    try {
+      // Immediately stop auto-reject timer
+      clearTimeout(jobTimeoutRef.current);
 
-    console.log(`[JOB] Accepting job #${job.id}...`);
+      console.log(`[JOB] Accepting job #${job.id}...`);
 
-    // Accept the job through API
-    const res = await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
-    const acceptedJob = res.data?.job || job;
-    console.log("[JOB] Accepted via API:", acceptedJob);
+      // Accept the job through API
+      const res = await api.post(`/jobs/AcceptServiceRequest/${job.id}/`);
+      const acceptedJob = res.data?.job || job;
+      console.log("[JOB] Accepted via API:", acceptedJob);
 
-    // Stop receiving new jobs
-    intendedOnlineState.current = false;
-    setIsOnline(false);
+      // Stop receiving new jobs
+      intendedOnlineState.current = false;
+      setIsOnline(false);
 
-    // Update mechanic status locally and remotely
-    await api.put("/jobs/UpdateMechanicStatus/", { status: "WORKING" });
-    setBasicNeeds(prev => ({ ...prev, status: "WORKING" }));
+      // Update mechanic status locally and remotely
+      await api.put("/jobs/UpdateMechanicStatus/", { status: "WORKING" });
+      setBasicNeeds(prev => ({ ...prev, status: "WORKING" }));
 
-    // Save to localStorage for persistence
-    localStorage.setItem("acceptedJob", JSON.stringify(acceptedJob));
-    setJob(acceptedJob);
+      // Save to localStorage for persistence
+      localStorage.setItem("acceptedJob", JSON.stringify(acceptedJob));
+      setJob(acceptedJob);
 
-    // Optionally notify WebSocket (if supported)
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({
-        type: "job_status_update",
-        job_id: acceptedJob.id,
-        status: "ACCEPTED",
-      }));
-    }
-
-    console.log("[JOB] Navigation to job page...");
-    navigate(`/job/${acceptedJob.id}`);
-  } catch (error) {
-    console.error("[JOB] Failed to accept job:", error);
-
-    // fallback — restore 30s auto reject if still pending
-    jobTimeoutRef.current = setTimeout(() => {
+      // Optionally notify WebSocket (if supported)
       if (socketRef.current?.readyState === WebSocket.OPEN) {
         socketRef.current.send(JSON.stringify({
           type: "job_status_update",
-          job_id: job.id,
-          status: "REJECTED",
-          reason: "timeout_after_accept_failure",
+          job_id: acceptedJob.id,
+          status: "ACCEPTED",
         }));
       }
-      setJob(null);
-      localStorage.removeItem("acceptedJob");
-    }, 30000);
-  }
-};
+
+      console.log("[JOB] Navigation to job page...");
+      navigate(`/job/${acceptedJob.id}`);
+    } catch (error) {
+      console.error("[JOB] Failed to accept job:", error);
+
+      // fallback — restore 30s auto reject if still pending
+      jobTimeoutRef.current = setTimeout(() => {
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({
+            type: "job_status_update",
+            job_id: job.id,
+            status: "REJECTED",
+            reason: "timeout_after_accept_failure",
+          }));
+        }
+        setJob(null);
+        localStorage.removeItem("acceptedJob");
+      }, 30000);
+    }
+  };
 
 
 
@@ -475,6 +479,33 @@ useEffect(() => {
     }
   };
 
+
+  // Add this useEffect to handle 401 errors
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      (response) => response, // Pass through successful responses
+      (error) => {
+        // Check if it's a 401 Unauthorized error
+        if (error.response && error.response.status === 401) {
+          console.error("Authentication error (401):", error.response.data);
+
+          // Check for the specific DRF message
+          if (error.response.data?.detail === "Authentication credentials were not provided.") {
+            console.log("Redirecting to login due to 401.");
+            // Perform the redirect to the login page
+            navigate('/login');
+          }
+        }
+        // Important: reject the promise so the original .catch() blocks still fire
+        return Promise.reject(error);
+      }
+    );
+
+    // Cleanup function to remove the interceptor when the component unmounts
+    return () => {
+      api.interceptors.response.eject(interceptor);
+    };
+  }, [navigate]); // Add navigate as a dependency
 
 
   useEffect(() => {
@@ -515,47 +546,47 @@ useEffect(() => {
     clearTimeout(jobTimeoutRef.current);
 
   };
-// 🔔 Play sound when JobNotificationPopup appears
-useEffect(() => {
-  // Play alert repeatedly for 30 seconds while popup is active
-  if (job && basicNeeds?.status !== "WORKING" && userInteracted.current) {
-    const sound = new Audio("/sounds/alert-33762.mp3");
-    sound.volume = 0.5;
+  // 🔔 Play sound when JobNotificationPopup appears
+  useEffect(() => {
+    // Play alert repeatedly for 30 seconds while popup is active
+    if (job && basicNeeds?.status !== "WORKING" && userInteracted.current) {
+      const sound = new Audio("/sounds/alert-33762.mp3");
+      sound.volume = 0.5;
 
-    let playCount = 0;
-    const maxDuration = 30000; // 30 seconds total
-    const playInterval = 4000; // repeat every 4 seconds
+      let playCount = 0;
+      const maxDuration = 30000; // 30 seconds total
+      const playInterval = 4000; // repeat every 4 seconds
 
-    const playSound = () => {
-      sound.currentTime = 0;
-      sound.play().catch(err =>
-        console.warn("Notification sound failed:", err)
-      );
-      playCount++;
-    };
+      const playSound = () => {
+        sound.currentTime = 0;
+        sound.play().catch(err =>
+          console.warn("Notification sound failed:", err)
+        );
+        playCount++;
+      };
 
-    // play immediately
-    playSound();
+      // play immediately
+      playSound();
 
-    // repeat until 30 s reached or job cleared
-    const intervalId = setInterval(playSound, playInterval);
+      // repeat until 30 s reached or job cleared
+      const intervalId = setInterval(playSound, playInterval);
 
-    // safety timeout to stop after 30 s
-    const timeoutId = setTimeout(() => {
-      clearInterval(intervalId);
-      console.log("[Sound] Stopped after 30 s timeout.");
-    }, maxDuration);
+      // safety timeout to stop after 30 s
+      const timeoutId = setTimeout(() => {
+        clearInterval(intervalId);
+        console.log("[Sound] Stopped after 30 s timeout.");
+      }, maxDuration);
 
-    // cleanup when job changes or popup closes
-    return () => {
-      clearInterval(intervalId);
-      clearTimeout(timeoutId);
-      sound.pause();
-      sound.currentTime = 0;
-      console.log("[Sound] Stopped (cleanup).");
-    };
-  }
-}, [job, basicNeeds?.status]);
+      // cleanup when job changes or popup closes
+      return () => {
+        clearInterval(intervalId);
+        clearTimeout(timeoutId);
+        sound.pause();
+        sound.currentTime = 0;
+        console.log("[Sound] Stopped (cleanup).");
+      };
+    }
+  }, [job, basicNeeds?.status]);
 
 
   const value = {
@@ -575,71 +606,37 @@ useEffect(() => {
   };
 
   return (
+    <WebSocketContext.Provider value={value}>
+      {isPublicRoute || isVerified ? children : <UnverifiedPage />}
+      {isVerified && !isPublicRoute && (
+        <>
 
-     <WebSocketContext.Provider value={value}>
-    {!isVerified ? (
-      <UnverifiedPage />
-    ) : (
-      <>
-      {children}
+          {/* "Active Job" banner */}
+          {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
+            <div className="fixed top-0 left-0 right-0 z-40 bg-blue-600 text-white flex items-center justify-between px-4 py-3 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="font-semibold">Active Job #{job.id}</span>
+                <span className="text-sm opacity-90 truncate max-w-xs">{job.problem}</span>
+              </div>
+              <button
+                onClick={() => navigate(`/job/${job.id}`)}
+                className="bg-white text-blue-600 px-3 py-1 rounded-md font-medium hover:bg-gray-100 transition"
+              >
+                View Job
+              </button>
+            </div>
+          )}
 
-      {/* Debug panel */}
-      {/* {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-19 left-2 z-50 bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
-          <div><strong>WebSocket Debug</strong></div>
-          <div>Status: <span className={
-            connectionStatus === 'connected' ? 'text-green-400' :
-              connectionStatus === 'connecting' ? 'text-yellow-400' : 'text-red-400'
-          }>{connectionStatus}</span></div>
-          <div>Online: <span className={isOnline ? 'text-green-400' : 'text-red-400'}>{isOnline.toString()}</span></div>
-          <div>Verified: <span className={isVerified ? 'text-green-400' : 'text-red-400'}>{isVerified.toString()}</span></div>
-          <div>Socket: {socket ? <span className="text-green-400">Connected ({socket.readyState})</span> : <span className="text-red-400">No Socket</span>}</div>
-          <div>Current Job: {job ? <span className="text-green-400">Yes</span> : <span className="text-red-400">No</span>}</div>
-          <div>Reconnect: {reconnectAttempts.current}/{maxReconnectAttempts}</div>
-          <button
-            onClick={() => {
-              console.log("Full state:", {
-                connectionStatus,
-                isOnline,
-                isVerified,
-                socket: socket ? `readyState: ${socket.readyState}` : null,
-                basicNeeds,
-                intendedOnline: intendedOnlineState.current,
-                job
-              });
-            }}
-            className="mt-1 bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs"
-          >
-            Log State
-          </button>
-        </div>
-      )} */}
-      {!isOnJobPage && basicNeeds?.status === "WORKING" && job && (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-blue-600 text-white flex items-center justify-between px-4 py-3 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <span className="font-semibold">Active Job #{job.id}</span>
-            <span className="text-sm opacity-90 truncate max-w-xs">{job.problem}</span>
-          </div>
-          <button
-            onClick={() => navigate(`/job/${job.id}`)}
-            className="bg-white text-blue-600 px-3 py-1 rounded-md font-medium hover:bg-gray-100 transition"
-          >
-            View Job
-          </button>
-        </div>
+          {/* "New Job" popup */}
+          {!isOnJobPage && basicNeeds?.status !== "WORKING" && job && (
+            <JobNotificationPopup
+              job={job}
+              onAccept={handleAcceptJob}
+              onReject={handleRejectJob}
+            />
+          )}
+        </>
       )}
-
-      {!isOnJobPage && basicNeeds?.status !== "WORKING" && job && (
-        <JobNotificationPopup
-          job={job}
-          onAccept={handleAcceptJob}
-          onReject={handleRejectJob}
-        />
-      )}
-
-    </>
-    )}
-
     </WebSocketContext.Provider>
   );
 };

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BadgeCheck, Loader } from 'lucide-react';
 import api from '@/utils/api';
+import Navbar from '@/mechanic/componets/Navbar';
 
 const UnverifiedPage = () => {
   const navigate = useNavigate();
@@ -66,6 +67,8 @@ const UnverifiedPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
+      <Navbar />
+
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center flex flex-col items-center justify-center">
         {renderContent()}
       </div>
