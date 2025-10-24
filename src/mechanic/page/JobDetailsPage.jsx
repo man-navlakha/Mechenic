@@ -5,7 +5,7 @@ import { useWebSocket } from "@/context/WebSocketContext";
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import api from '@/utils/api';
+import { Button } from "@/components/ui/button"; // <-- ADD THIS IMPORT
 import { MapPin, Phone, Car, Navigation, Check, X, SquareX, Loader2 } from "lucide-react";
 import Navbar from "../componets/Navbar";
 
@@ -40,8 +40,8 @@ export default function JobDetailsPage() {
     const [distanceFromJob, setDistanceFromJob] = useState(null);
     const [mechanicCurrentLocation, setMechanicCurrentLocation] = useState(null);
 
-  const navigate = useNavigate();
-  const location = useLocation();
+    const navigate = useNavigate();
+    const location = useLocation();
     const mapContainerRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const mechanicMarkerRef = useRef(null);
@@ -194,14 +194,14 @@ export default function JobDetailsPage() {
             alert("Something went wrong while completing the job.");
         } finally {
             setLoading(false);
-           localStorage.setItem("job_comp", JSON.stringify({
-  id: job.id,
-  price,
-  first_name: job.first_name,
-  last_name: job.last_name,
-  vehicle_type: job.vehical_type,
-  problem: job.problem,
-}));
+            localStorage.setItem("job_comp", JSON.stringify({
+                id: job.id,
+                price,
+                first_name: job.first_name,
+                last_name: job.last_name,
+                vehicle_type: job.vehical_type,
+                problem: job.problem,
+            }));
 
             navigate('/job_completed/');
         }
@@ -287,7 +287,18 @@ export default function JobDetailsPage() {
                                 <div className="text-center p-4 bg-gray-100 rounded-lg text-gray-600 flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /><span>Checking your distance from the job...</span></div>
                             )}
                             {distanceFromJob !== null && isNearJob && (
-                                <SwipeButton onSwipeSuccess={handleCompleteJob} text="Swipe to Complete Job" successText="Job Completed!" Icon={Check} gradientColors={{ from: 'from-green-500', to: 'to-green-600' }} iconColor="text-green-600" disabled={loading} />
+                                <Button
+                                    onClick={handleCompleteJob}
+                                    disabled={loading}
+                                    className="w-full h-14 text-lg font-semibold bg-green-500 hover:bg-green-600 text-white"
+                                >
+                                    {loading ? (
+                                        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                                    ) : (
+                                        <Check className="mr-2 h-6 w-6" />
+                                    )}
+                                    Complete Job
+                                </Button>
                             )}
                             {distanceFromJob !== null && !isNearJob && (
                                 <div className="text-center p-4 bg-amber-100 rounded-lg text-amber-800 font-semibold border border-amber-200">
