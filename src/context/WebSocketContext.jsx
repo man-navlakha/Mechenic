@@ -135,21 +135,6 @@ export const WebSocketProvider = ({ children }) => {
         reconnectAttempts.current = 0;
         setSocket(ws);
 
-        // Send location immediately + every minute
-        const sendLocation = () => {
-          if (ws.readyState === WebSocket.OPEN) {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                const { latitude, longitude } = pos.coords;
-                ws.send(JSON.stringify({ type: "location_update", latitude, longitude }));
-              },
-              (err) => console.error("Location error:", err.message),
-              { enableHighAccuracy: true }
-            );
-          }
-        };
-        sendLocation();
-        locationInterval.current = setInterval(sendLocation, 60000);
       };
 
       ws.onmessage = (event) => {
@@ -200,9 +185,7 @@ export const WebSocketProvider = ({ children }) => {
         setSocket(null);
         setConnectionStatus("disconnected");
 
-        clearInterval(locationInterval.current);
-        locationInterval.current = null;
-
+      
         if (intendedOnlineState.current && reconnectAttempts.current < maxReconnectAttempts) {
           reconnectAttempts.current += 1;
           const delay = Math.min(3000 * reconnectAttempts.current, 30000);
