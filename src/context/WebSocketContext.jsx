@@ -157,6 +157,14 @@ export const WebSocketProvider = ({ children }) => {
               if (data.job) setJob(data.job);
               break;
 
+            case "cancel_request":
+              if (job?.id?.toString() === data.request_id?.toString()) {
+                console.log(`[WS] Job #${data.request_id} was cancelled by the user.`);
+                alert("This job was cancelled by the user.");
+                clearJob(); // This will clear the job from state and localStorage
+              }
+              break;
+
             case "job_taken":
               if (job?.id?.toString() === data.job_id?.toString()) {
                 alert("This job was taken by another mechanic.");
@@ -185,7 +193,7 @@ export const WebSocketProvider = ({ children }) => {
         setSocket(null);
         setConnectionStatus("disconnected");
 
-      
+
         if (intendedOnlineState.current && reconnectAttempts.current < maxReconnectAttempts) {
           reconnectAttempts.current += 1;
           const delay = Math.min(3000 * reconnectAttempts.current, 30000);
