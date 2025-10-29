@@ -2,10 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import api from '@/utils/api';
 import JobNotificationPopup from '@/components/JobNotificationPopup';
 import JobInProgress from '@/components/JobInProgress';
-import { useNavigate } from 'react-router-dom';
-import { useLocation } from "react-router-dom";
 import UnverifiedPage from '@/components/UnverifiedPage';
 import { toast } from "sonner"
+import { useNavigate, useLocation } from 'react-router-dom';
 
 
 
@@ -15,15 +14,11 @@ export const useWebSocket = () => useContext(WebSocketContext);
 
 export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const socketRef = useRef(null); // NEW
+  const socketRef = useRef(null);
   const jobTimeoutRef = useRef(null);
   const jobNotificationSound = new Audio('/sounds/reliable-safe-327618.mp3');
-
   const jobRef = useRef(null);
   const lastClearedJobId = useRef(null);
-
-
-
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isOnline, setIsOnline] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -32,7 +27,6 @@ export const WebSocketProvider = ({ children }) => {
   const reconnectAttempts = useRef(0);
   const intendedOnlineState = useRef(false);
   const maxReconnectAttempts = 5;
-  const locationInterval = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const isOnJobPage =
@@ -42,12 +36,27 @@ export const WebSocketProvider = ({ children }) => {
   const publicRoutes = ['/login', '/logout', '/form']; // Add any other public routes
   const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route));
 
-
   const userInteracted = useRef(false);
+
+  // 🔧 NEW: Safe socket reconnection checker
+  const ensureSocketConnected = async () => {
+    try {
+      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+        console.warn("[WS] Socket not connected — reconnecting...");
+        toast.info("Reconnecting WebSocket...");
+        await connectWebSocket();
+      } else {
+        console.log("[WS] Socket is already open ✅");
+      }
+    } catch (error) {
+      console.error("[WS] ensureSocketConnected error:", error);
+    }
+  };
 
   useEffect(() => {
     jobRef.current = job;
   }, [job]);
+
 
 
   useEffect(() => {
@@ -61,28 +70,37 @@ export const WebSocketProvider = ({ children }) => {
       window.removeEventListener('touchstart', markInteracted);
     };
   }, []);
+  // Simple debounce helper
+  const debounce = (fn, delay = 300) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn(...args), delay);
+    };
+  };
 
-
-  const updateStatus = async (status) => {
+  // Debounced version of updateStatus
+  const updateStatus = debounce(async (status) => {
     try {
-      console.log("Updating status to:", status);
+      console.log("[STATUS] Updating mechanic status to:", status);
       if (status === 'OFFLINE') {
         await fetch('/api/jobs/UpdateMechanicStatus/', {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'OFFLINE' }),
           keepalive: true,
         });
       } else {
         await api.put("/jobs/UpdateMechanicStatus/", { status });
       }
-      console.log("Status updated successfully");
+      console.log("[STATUS] Status updated successfully ✅");
+      toast.success(`Status set to ${status}`);
     } catch (error) {
-      console.error("Failed to update status:", error);
+      console.error("[STATUS] Failed to update status:", error);
+      toast.error("Failed to update status.");
     }
-  };
+  }, 400); // delay 400ms
+
 
   const fetchInitialStatus = async () => {
     try {
@@ -109,9 +127,10 @@ export const WebSocketProvider = ({ children }) => {
     fetchInitialStatus();
   }, []);
 
+
   const connectWebSocket = async () => {
     if (socketRef.current && [WebSocket.OPEN, WebSocket.CONNECTING].includes(socketRef.current.readyState)) {
-      console.log("WebSocket already active, skipping reconnect.");
+      console.log("[WS] Already active, skipping reconnect.");
       return;
     }
 
@@ -178,13 +197,6 @@ export const WebSocketProvider = ({ children }) => {
               if (data.job) setJob(data.job);
               break;
 
-            case "cancel_request":
-              if (job?.id?.toString() === data.request_id?.toString()) {
-                console.log(`[WS] Job #${data.request_id} was cancelled by the user.`);
-                toast.warning("This job was cancelled by the user.");
-                clearJob();
-              }
-              break;
 
             case "job_taken":
               if (job?.id?.toString() === data.job_id?.toString()) {
@@ -196,31 +208,38 @@ export const WebSocketProvider = ({ children }) => {
             case "job_cancelled":
             case "job_expired": {
               const currentJob = jobRef.current;
-              const sameJob = currentJob?.id?.toString() === data.job_id?.toString();
+              const jobId = data.job_id?.toString();
 
-              if (sameJob || lastClearedJobId.current?.toString() === data.job_id?.toString()) {
-                (async () => {
-                  console.warn(`[WS] Job #${data.job_id} ${data.type}. Clearing state.`);
-                  lastClearedJobId.current = data.job_id; // ✅ track that we cleared this one
-                  clearJob();
-                  toast.warning(data.message || `Job ${data.type.replace("job_", "")}`);
-
-                  await updateStatus("ONLINE");
-                  setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
-                  intendedOnlineState.current = true;
-                  setIsOnline(true);
-
-                  ensureSocketConnected?.();
-                  if (location.pathname.startsWith("/job/")) navigate("/");
-                })();
-              } else {
-                console.log(`[WS] Ignored ${data.type} for another job #${data.job_id}`, {
-                  currentJobId: currentJob?.id,
-                  incomingJobId: data.job_id
-                });
+              // ✅ Skip if already cleared recently
+              if (lastClearedJobId.current?.toString() === jobId) {
+                console.log(`[WS] Ignoring duplicate ${data.type} for job #${jobId}`);
+                break;
               }
+
+              const sameJob = currentJob?.id?.toString() === jobId;
+              if (!sameJob) {
+                console.log(`[WS] Ignored ${data.type} for another job #${jobId}`);
+                break;
+              }
+
+              console.warn(`[WS] Job #${jobId} ${data.type}. Clearing state.`);
+              lastClearedJobId.current = jobId;
+
+              clearJob();
+              toast.warning(data.message || `Job ${data.type.replace("job_", "")}`);
+
+              // ✅ Debounce status update (prevent ONLINE/OFFLINE race)
+              clearTimeout(jobTimeoutRef.current);
+              jobTimeoutRef.current = setTimeout(async () => {
+                await updateStatus("ONLINE");
+                setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
+                intendedOnlineState.current = true;
+                setIsOnline(true);
+                navigate("/");
+              }, 300); // 300ms debounce
               break;
             }
+
 
 
 
@@ -319,9 +338,13 @@ export const WebSocketProvider = ({ children }) => {
   };
 
   const clearJob = () => {
+    if (!jobRef.current) return;
+    console.log("[clearJob] Clearing current job:", jobRef.current.id);
+    jobRef.current = null;
     setJob(null);
-    localStorage.removeItem('acceptedJob');
+    localStorage.removeItem("acceptedJob");
   };
+
 
 
 
