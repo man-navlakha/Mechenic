@@ -5,6 +5,7 @@ import JobInProgress from '@/components/JobInProgress';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
 import UnverifiedPage from '@/components/UnverifiedPage';
+import { toast } from "sonner"
 
 
 
@@ -18,6 +19,8 @@ export const WebSocketProvider = ({ children }) => {
   const jobTimeoutRef = useRef(null);
   const jobNotificationSound = new Audio('/sounds/reliable-safe-327618.mp3');
 
+  const jobRef = useRef(null);
+  const lastClearedJobId = useRef(null);
 
 
 
@@ -42,6 +45,9 @@ export const WebSocketProvider = ({ children }) => {
 
   const userInteracted = useRef(false);
 
+  useEffect(() => {
+    jobRef.current = job;
+  }, [job]);
 
 
   useEffect(() => {
@@ -143,14 +149,29 @@ export const WebSocketProvider = ({ children }) => {
           const data = JSON.parse(event.data);
 
           switch (data.type) {
-            case "new_job":
-              if (data.service_request) {
-                console.log("[WS] New job received:", data.service_request);
-                window.dispatchEvent(
-                  new CustomEvent("newJobAvailable", { detail: data.service_request })
-                );
+            case "new_job": {
+              const newJob = data.service_request;
+              if (!newJob) break;
+
+              if (basicNeeds?.status === "WORKING") {
+                console.log("[WS] Ignoring new job — mechanic already working.");
+                break;
               }
+
+              if (job?.id?.toString() === newJob.id.toString()) {
+                console.warn("[WS] Ignoring duplicate new_job for same ID:", newJob.id);
+                break;
+              }
+
+              if (newJob.status !== "PENDING") {
+                console.log("[WS] Ignoring non-pending job broadcast:", newJob.status);
+                break;
+              }
+
+              console.log("[WS] New job received:", newJob);
+              window.dispatchEvent(new CustomEvent("newJobAvailable", { detail: newJob }));
               break;
+            }
 
             case "job_update":
             case "job_status_update":
@@ -160,8 +181,8 @@ export const WebSocketProvider = ({ children }) => {
             case "cancel_request":
               if (job?.id?.toString() === data.request_id?.toString()) {
                 console.log(`[WS] Job #${data.request_id} was cancelled by the user.`);
-                alert("This job was cancelled by the user.");
-                clearJob(); // This will clear the job from state and localStorage
+                toast.warning("This job was cancelled by the user.");
+                clearJob();
               }
               break;
 
@@ -172,13 +193,37 @@ export const WebSocketProvider = ({ children }) => {
               }
               break;
 
-            case "job_expired":
             case "job_cancelled":
-              if (job?.id?.toString() === data.job_id?.toString()) {
-                clearJob();
-                if (data.type === "job_cancelled") alert(`Job cancelled: ${data.message}`);
+            case "job_expired": {
+              const currentJob = jobRef.current;
+              const sameJob = currentJob?.id?.toString() === data.job_id?.toString();
+
+              if (sameJob || lastClearedJobId.current?.toString() === data.job_id?.toString()) {
+                (async () => {
+                  console.warn(`[WS] Job #${data.job_id} ${data.type}. Clearing state.`);
+                  lastClearedJobId.current = data.job_id; // ✅ track that we cleared this one
+                  clearJob();
+                  toast.warning(data.message || `Job ${data.type.replace("job_", "")}`);
+
+                  await updateStatus("ONLINE");
+                  setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
+                  intendedOnlineState.current = true;
+                  setIsOnline(true);
+
+                  ensureSocketConnected?.();
+                  if (location.pathname.startsWith("/job/")) navigate("/");
+                })();
+              } else {
+                console.log(`[WS] Ignored ${data.type} for another job #${data.job_id}`, {
+                  currentJobId: currentJob?.id,
+                  incomingJobId: data.job_id
+                });
               }
               break;
+            }
+
+
+
 
             default:
               console.log("[WS] Unhandled type:", data.type);
@@ -187,6 +232,7 @@ export const WebSocketProvider = ({ children }) => {
           console.error("[WS] Parse error:", err);
         }
       };
+
 
       ws.onclose = (e) => {
         console.warn("[WS] Closed:", e.code, e.reason);
@@ -440,32 +486,58 @@ export const WebSocketProvider = ({ children }) => {
 
 
 
-
   const cancelJob = async (jobId, reason) => {
     try {
+      console.log(`[JOB] Cancelling job #${jobId}...`);
+
       await api.post(`/jobs/CancelServiceRequest/${jobId}/`, { cancellation_reason: reason });
-      console.log("Job cancellation request sent.");
+      console.log("[JOB] Job cancelled successfully.");
+
+      // ✅ Clear the job locally
       clearJob();
+
+      // ✅ Update mechanic status to ONLINE again
+      await updateStatus("ONLINE");
+      setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
+      intendedOnlineState.current = true;
+      setIsOnline(true);
+
+      // ✅ Optional: reconnect WebSocket if it was closed
+      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+        connectWebSocket();
+      }
+
+      // ✅ Go back to home page
       navigate('/');
     } catch (error) {
-      console.error("Failed to cancel job:", error);
-      // Optionally, re-throw or handle the error in the UI
+      console.error("[JOB] Failed to cancel job:", error);
+      toast.error("Failed to cancel job. Please try again.");
       throw error;
     }
   };
-
   const completeJob = async (jobId, price) => {
     try {
+      console.log(`[JOB] Completing job #${jobId}...`);
       await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
-      console.log("Job completion request sent.");
+      console.log("[JOB] Job completion sent.");
 
-      // Go back to being online after completing a job
+      // ✅ Return to ONLINE mode
       await updateStatus("ONLINE");
+      setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
+      intendedOnlineState.current = true;
+      setIsOnline(true);
 
+      // ✅ Optional: reconnect WebSocket if closed
+      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+        connectWebSocket();
+      }
+
+      // ✅ Clear current job and return to home
       clearJob();
       navigate('/');
     } catch (error) {
-      console.error("Failed to complete job:", error);
+      console.error("[JOB] Failed to complete job:", error);
+      toast.error("Failed to complete job. Please try again.");
       throw error;
     }
   };
