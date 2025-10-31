@@ -1,7 +1,7 @@
 import React from 'react'; // Removed unused hooks: useState, useEffect, useRef
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, LogOut, Menu, BadgeCheck } from 'lucide-react'; // Removed unused ChevronDown
-import { useLock } from '../../context/LockContext';
+// import { useLock } from '../../context/LockContext'; // Removed
 import { useWebSocket } from '@/context/WebSocketContext';
 
 // Shadcn/ui components
@@ -29,7 +29,7 @@ const Navbar = () => {
   const ws = useWebSocket() || {};
   const { isOnline = false, isVerified = false, basicNeeds = null, job = null } = ws;
 
-  const { lockScreen } = useLock();
+  // const { lockScreen } = useLock(); // Removed
   const navigate = useNavigate();
   const location = useLocation();
   const isOnJobPage =
@@ -87,7 +87,7 @@ const Navbar = () => {
                 <MobileMenu
                   mechanicName={mechanicName}
                   shopName={shopName}
-                  lockScreen={lockScreen}
+                  // lockScreen={lockScreen} // Removed
                   handleLogout={handleLogout}
                   basicNeeds={basicNeeds}
                   job={job}
@@ -176,10 +176,10 @@ const Navbar = () => {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={lockScreen}>
+                {/* <DropdownMenuItem onClick={lockScreen}> // Removed
                   <Lock className="mr-2 h-4 w-4" />
                   <span>Lock Screen</span>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
@@ -199,7 +199,7 @@ const Navbar = () => {
 
 // Mobile Menu Component
 // FIXED: Accepted necessary props: `basicNeeds`, `job`, and `shopName`.
-const MobileMenu = ({ mechanicName, shopName, lockScreen, handleLogout, basicNeeds, job }) => {
+const MobileMenu = ({ mechanicName, shopName, handleLogout, basicNeeds, job }) => { // Removed lockScreen prop
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -248,10 +248,10 @@ const MobileMenu = ({ mechanicName, shopName, lockScreen, handleLogout, basicNee
               Profile
             </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start" onClick={lockScreen}>
+          {/* <Button variant="ghost" className="w-full justify-start" onClick={lockScreen}> // Removed
             <Lock className="mr-2 h-4 w-4" />
             Lock Screen
-          </Button>
+          </Button> */}
         </div>
       </div>
 

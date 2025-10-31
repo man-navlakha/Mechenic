@@ -66,12 +66,14 @@ const UnverifiedPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
+    <div className='min-h-screen  '>
       <Navbar />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
 
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center flex flex-col items-center justify-center">
         {renderContent()}
       </div>
+    </div>
     </div>
   );
 };
