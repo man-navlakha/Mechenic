@@ -263,18 +263,49 @@ export const WebSocketProvider = ({ children }) => {
               if (data.job) setJob(data.job);
               break;
 
-            case "job_status_update":
-              console.log("Job status update:", data);
-              
+            // --- PATCH: job_status_update handling inside ws.onmessage switch ---
+            // Replace the existing case "job_status_update" block with this:
+
+            case "job_status_update": {
+              console.log("[WS] job_status_update received:", data);
+              const { job_id, status } = data;
+
               // Update job state if it's the current job
-              setJob(prevJob => (prevJob && prevJob.id.toString() === data.job_id.toString()) ? { ...prevJob, status: data.status } : prevJob);
-              
-              // Show a notification when the job is marked complete
-              if (data.status === 'COMPLETED') {
-                // You can customize this message
-                toast.success(`Job (ID: ${data.job_id}) has been completed!`);
+              setJob(prevJob =>
+                prevJob && prevJob.id?.toString() === job_id?.toString()
+                  ? { ...prevJob, status }
+                  : prevJob
+              );
+
+              // If server says COMPLETED for the current job -> clear local job & persisted state
+              if (status === "COMPLETED") {
+                console.log(`[WS] Job ${job_id} marked COMPLETED by server — clearing local state.`);
+                lastClearedJobId.current = job_id?.toString();
+                setJob(null);
+                jobRef.current = null;
+                localStorage.removeItem('acceptedJob');
+
+                // Bring mechanic back online
+                (async () => {
+                  try {
+                    await updateStatus("ONLINE");
+                    setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
+                    intendedOnlineState.current = true;
+                    setIsOnlineState(true);
+                  } catch (e) {
+                    console.warn("[WS] updateStatus(ONLINE) failed after COMPLETED:", e);
+                  }
+                })();
+
+                // Notify the user
+                toast.success(`Job (ID: ${job_id}) has been completed.`);
+              } else {
+                // Not completed: show toast/notification
+                toast.info(`Job ${job_id} status: ${status}`);
               }
               break;
+            }
+
             // --- END OF FIX ---
 
 
@@ -532,31 +563,50 @@ export const WebSocketProvider = ({ children }) => {
     }
   }, [job, basicNeeds?.status]);
 
-  // ===== Websocket-safe send with REST fallback and queuing =====
+  // --- PATCH: safeSend (replace existing implementation) ---
   const safeSend = async (payload, restFallback = null) => {
     try {
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
         socketRef.current.send(JSON.stringify(payload));
         console.log("[WS] Sent via WS:", payload);
+        return { via: "ws", ok: true };
       } else {
-        console.warn("[WS] Socket not open — queueing and trying REST fallback if provided.");
+        console.warn("[WS] Socket not open — queueing and trying REST fallback if provided.", payload);
         queueMessage(payload);
         if (restFallback) {
-          try { await restFallback(); } catch (e) { console.warn("[WS] REST fallback failed:", e); }
+          try {
+            const res = await restFallback();
+            console.log("[WS] REST fallback response:", res?.data ?? res);
+            return { via: "rest", ok: true, res };
+          } catch (e) {
+            console.error("[WS] REST fallback failed:", e);
+            // rethrow so caller sees the failure
+            throw e;
+          }
         } else {
           toast.warning("Connection lost. Action queued.");
+          // Return queued indication
+          return { via: "queue", ok: false };
         }
-        ensureSocketConnected();
       }
     } catch (err) {
       console.error("[WS] safeSend error:", err);
       if (restFallback) {
-        try { await restFallback(); } catch (e) { console.error("[WS] REST fallback also failed:", e); }
+        try {
+          const res = await restFallback();
+          console.log("[WS] REST fallback after safeSend error succeeded:", res?.data ?? res);
+          return { via: "rest", ok: true, res };
+        } catch (e) {
+          console.error("[WS] REST fallback also failed:", e);
+          throw e;
+        }
       } else {
         queueMessage(payload);
+        throw err;
       }
     }
   };
+
 
   // ===== job actions (accept/cancel/complete) =====
   const handleAcceptJob = async () => {
@@ -645,62 +695,32 @@ export const WebSocketProvider = ({ children }) => {
   };
 
   const completeJob = async (jobId, price) => {
-    console.groupCollapsed("%c[JOB] >>> COMPLETE_JOB TRIGGERED <<<", "color: #00eaff; font-weight: bold;");
-    console.log("[JOB] Job ID:", jobId);
-    console.log("[JOB] Price:", price);
-    console.log("[JOB] jobRef.current:", jobRef.current);
-    console.log("[JOB] basicNeeds?.status:", basicNeeds?.status);
-    console.log("[WS] socketRef.current state:", socketRef.current?.readyState);
-    console.groupEnd();
-
     try {
-      const payload = {
-        type: "job_status_update",
-        job_id: jobId,
-        status: "COMPLETED",
-        price,
-      };
+      console.log(`[JOB] Completing job #${jobId}...`);
+      await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
+      console.log("[JOB] Job completion sent via REST ✅");
 
-      console.log("[WS] Attempting to send completion payload:", payload);
-
-      // Try to send via WebSocket first, fallback to REST
-      await safeSend(
-        payload,
-        async () => {
-          console.log("[WS] REST fallback triggered for completion...");
-          return await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
-        }
-      );
-
-      console.log("%c[JOB] ✅ Completion message sent (via WS or REST).", "color: limegreen; font-weight: bold;");
-
-
-      // Update mechanic to ONLINE
-      console.log("[STATUS] Updating mechanic to ONLINE after completion...");
+      // ✅ Return to ONLINE mode
       await updateStatus("ONLINE");
-
       setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
       intendedOnlineState.current = true;
       setIsOnlineState(true);
 
-      lastClearedJobId.current = jobId?.toString();
-      setJob(null);
-      jobRef.current = null;
-      localStorage.removeItem('acceptedJob');
-
-      navigate('/');
-      toast.success("✅ Job completed successfully!");
-      console.log("%c[JOB] Job completion workflow finished cleanly ✅", "color: limegreen; font-weight: bold;");
-    } catch (err) {
-      console.error("%c[JOB] ❌ Complete job failed:", "color: red; font-weight: bold;", err);
-
-      if (err.response) {
-        console.error("[JOB] Error response:", err.response.status, err.response.data);
+      // ✅ Optional: reconnect WebSocket if closed
+      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+        connectWebSocket();
       }
 
+      // ✅ Clear current job and return to home
+      clearJob();
+      navigate('/');
+    } catch (error) {
+      console.error("[JOB] Failed to complete job:", error);
       toast.error("Failed to complete job. Please try again.");
+      throw error;
     }
   };
+
 
 
   // explicit disconnect

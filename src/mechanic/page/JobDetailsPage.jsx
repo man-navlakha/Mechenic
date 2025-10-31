@@ -195,26 +195,34 @@ export default function JobDetailsPage() {
             alert("Please enter a valid, non-negative price.");
             return;
         }
+
         setLoading(true);
+        console.log("[UI] Starting complete job flow for job:", job?.id, "price:", price);
         try {
-            await completeJob(job.id, price);
-        } catch (err) {
-            console.error("Failed to complete job:", err);
-            alert("Something went wrong while completing the job.");
-        } finally {
-            setLoading(false);
+            // Ask the provider to complete the job but suppress provider navigation
+            await completeJob(job.id, price, { suppressNavigate: true });
+
+            // Persist some completed job summary locally (optional)
             localStorage.setItem("job_comp", JSON.stringify({
                 id: job.id,
                 price,
                 first_name: job.first_name,
                 last_name: job.last_name,
-                vehicle_type: job.vehical_type,
+                vehicle_type: job.vehical_type || job.vehicle_type,
                 problem: job.problem,
             }));
 
+            // Navigate to your dedicated completion page
             navigate('/job_completed/');
+        } catch (err) {
+            console.error("[UI] completeJob failed:", err);
+            const msg = err?.response?.data?.detail || err?.message || "Unknown error while completing job.";
+            alert("Could not complete job: " + msg);
+        } finally {
+            setLoading(false);
         }
     };
+
 
     const handleCancelJob = async (reason) => {
         if (loading) return;
