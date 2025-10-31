@@ -152,6 +152,19 @@ export const WebSocketProvider = ({ children }) => {
       console.log("[WS] User not verified; skipping connect.");
       return;
     }
+    // if WS fails to connect within 10 seconds, mark offline
+    setTimeout(async () => {
+      if (socketRef.current && socketRef.current.readyState !== WebSocket.OPEN) {
+        console.warn("[WS] Connection timeout — forcing OFFLINE.");
+        intendedOnlineState.current = false;
+        setIsOnlineState(false);
+        try {
+          await updateStatus("OFFLINE");
+        } catch (_) { }
+        toast.error("WebSocket connection failed. Mechanic set to OFFLINE.");
+      }
+    }, 10000);
+
 
     setConnectionStatus('connecting');
     connectionStatusRef.current = 'connecting';
@@ -178,7 +191,10 @@ export const WebSocketProvider = ({ children }) => {
         connectionStatusRef.current = 'connected';
         reconnectAttempts.current = 0;
         setSocket(ws);
-
+        if (!isOnline) {
+          await updateStatus("ONLINE");
+          setIsOnlineState(true);
+        }
         // start lightweight ping to detect half-open connections
         if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = setInterval(() => {
@@ -357,28 +373,44 @@ export const WebSocketProvider = ({ children }) => {
         connectionStatusRef.current = 'error';
       };
 
-      ws.onclose = (e) => {
+      ws.onclose = async (e) => {
         console.warn("[WS] Closed:", e.code, e.reason);
         setSocket(null);
         socketRef.current = null;
         setConnectionStatus("disconnected");
-        connectionStatusRef.current = 'disconnected';
+        connectionStatusRef.current = "disconnected";
 
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current);
           pingIntervalRef.current = null;
         }
 
-        // try to reconnect (exponential-ish backoff up to max)
-        if (intendedOnlineState.current && reconnectAttempts.current < maxReconnectAttempts) {
+        // If the user intends to stay online, attempt reconnect
+        if (intendedOnlineState.current) {
           reconnectAttempts.current += 1;
-          const delay = Math.min(1500 * reconnectAttempts.current, 30000);
-          console.log(`[WS] Reconnect attempt #${reconnectAttempts.current} in ${delay}ms`);
-          setTimeout(connectWebSocket, delay);
+
+          if (reconnectAttempts.current <= maxReconnectAttempts) {
+            const delay = Math.min(1500 * reconnectAttempts.current, 30000);
+            console.log(`[WS] Attempting reconnect #${reconnectAttempts.current} in ${delay}ms`);
+            setTimeout(connectWebSocket, delay);
+          } else {
+            console.log("[WS] Max reconnect attempts reached. Forcing OFFLINE state.");
+            intendedOnlineState.current = false;
+            setIsOnlineState(false);
+
+            try {
+              await updateStatus("OFFLINE");
+            } catch (err) {
+              console.warn("[WS] Failed to sync OFFLINE after disconnect:", err);
+            }
+
+            toast.error("Connection lost. Mechanic set to OFFLINE.");
+          }
         } else {
-          console.log("[WS] Will not reconnect further (max attempts or intended offline).");
+          console.log("[WS] Closed intentionally — staying OFFLINE.");
         }
       };
+
     } catch (err) {
       console.error("[WS] Failed to connect:", err);
       setConnectionStatus("error");
