@@ -238,8 +238,6 @@ export const WebSocketProvider = ({ children }) => {
                 break;
               }
 
-              // --- INCORRECT BLOCK REMOVED FROM HERE ---
-
               if (jobRef.current?.id?.toString() === newJob.id?.toString()) {
                 console.warn("[WS] Ignored duplicate new_job for same job ID:", newJob.id);
                 break;

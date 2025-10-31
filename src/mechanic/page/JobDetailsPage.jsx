@@ -33,10 +33,7 @@ const getDistanceInKm = (lat1, lon1, lat2, lon2) => { const R = 6371; const dLat
 // --- START: Main JobDetailsPage Component ---
 export default function JobDetailsPage() {
     const { id } = useParams();
-   const { job: contextJob, completeJob, cancelJob, socket } = useWebSocket();
-
-
-   
+    const { job: contextJob, completeJob, cancelJob, socket } = useWebSocket();
     const [job, setJob] = useState(contextJob || null);
     const [loading, setLoading] = useState(false);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -232,12 +229,11 @@ export default function JobDetailsPage() {
             setLoading(false);
         }
     };
-
-    // --- FIX: Corrected the Google Maps URL ---
     const handleNavigate = () => {
         const lat = parseFloat(job?.latitude);
         const lng = parseFloat(job?.longitude);
         if (!isNaN(lat) && !isNaN(lng)) {
+            // This URL will open Google Maps navigation directly to the coordinates
             const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
             window.open(url, '_blank');
         } else {
@@ -295,29 +291,43 @@ export default function JobDetailsPage() {
 
                     <Card className="shadow-sm border border-gray-200">
                         <CardContent className="p-4">
-                            {distanceFromJob === null && (
-                                <div className="text-center p-4 bg-gray-100 rounded-lg text-gray-600 flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /><span>Checking your distance from the job...</span></div>
-                            )}
-                            {distanceFromJob !== null && isNearJob && (
-                                <Button
-                                    onClick={handleCompleteJob}
-                                    disabled={loading}
-                                    className="w-full h-14 text-lg font-semibold bg-green-500 hover:bg-green-600 text-white"
-                                >
-                                    {loading ? (
-                                        <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                                    ) : (
-                                        <Check className="mr-2 h-6 w-6" />
-                                    )}
-                                    Complete Job
-                                </Button>
-                            )}
-                            {distanceFromJob !== null && !isNearJob && (
-                                <div className="text-center p-4 bg-amber-100 rounded-lg text-amber-800 font-semibold border border-amber-200">
-                                    You must be within 500m to complete the job.
-                                    <div className="text-sm font-normal">Current Distance: {(distanceFromJob * 1000).toFixed(0)} meters away</div>
+
+                            {/* 1. Show this if job status is COMPLETED */}
+                            {job.status === 'COMPLETED' ? (
+                                <div className="text-center p-4 bg-green-100 rounded-lg text-green-800 font-semibold border border-green-200 flex items-center justify-center gap-2">
+                                    <Check className="w-6 h-6" />
+                                    Job has been completed.
                                 </div>
-                            )}
+                            ) :
+
+                                /* 2. Show this if distance is still being checked */
+                                distanceFromJob === null ? (
+                                    <div className="text-center p-4 bg-gray-100 rounded-lg text-gray-600 flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /><span>Checking your distance from the job...</span></div>
+                                ) :
+
+                                    /* 3. Show this if near AND job is NOT completed */
+                                    isNearJob ? (
+                                        <Button
+                                            onClick={handleCompleteJob}
+                                            disabled={loading}
+                                            className="w-full h-14 text-lg font-semibold bg-green-500 hover:bg-green-600 text-white"
+                                        >
+                                            {loading ? (
+                                                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                                            ) : (
+                                                <Check className="mr-2 h-6 w-6" />
+                                            )}
+                                            Complete Job
+                                        </Button>
+                                    ) :
+
+                                        /* 4. Show this if too far away AND job is NOT completed */
+                                        (
+                                            <div className="text-center p-4 bg-amber-100 rounded-lg text-amber-800 font-semibold border border-amber-200">
+                                                You must be within 500m to complete the job.
+                                                <div className="text-sm font-normal">Current Distance: {(distanceFromJob * 1000).toFixed(0)} meters away</div>
+                                            </div>
+                                        )}
                         </CardContent>
                     </Card>
                 </div>
