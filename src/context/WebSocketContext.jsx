@@ -824,7 +824,12 @@ export const WebSocketProvider = ({ children }) => {
     jobRef.current = null;
     clearTimeout(jobTimeoutRef.current);
   };
-
+  const clearJob = () => {
+      lastClearedJobId.current = jobRef.current?.id?.toString();
+      setJob(null);
+      jobRef.current = null;
+      localStorage.removeItem('acceptedJob');
+    }
   // Provider value
   const value = {
     socket,
@@ -837,12 +842,7 @@ export const WebSocketProvider = ({ children }) => {
     disconnectWebSocket,
     job,
     sendJobStatus: safeSend,
-    clearJob: () => {
-      lastClearedJobId.current = jobRef.current?.id?.toString();
-      setJob(null);
-      jobRef.current = null;
-      localStorage.removeItem('acceptedJob');
-    },
+    
     cancelJob,
     completeJob,
   };
