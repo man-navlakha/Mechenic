@@ -238,6 +238,8 @@ export const WebSocketProvider = ({ children }) => {
                 break;
               }
 
+              // --- INCORRECT BLOCK REMOVED FROM HERE ---
+
               if (jobRef.current?.id?.toString() === newJob.id?.toString()) {
                 console.warn("[WS] Ignored duplicate new_job for same job ID:", newJob.id);
                 break;
@@ -258,10 +260,25 @@ export const WebSocketProvider = ({ children }) => {
             }
 
 
+            // --- FIX APPLIED HERE ---
             case "job_update":
-            case "job_status_update":
               if (data.job) setJob(data.job);
               break;
+
+            case "job_status_update":
+              console.log("Job status update:", data);
+              
+              // Update job state if it's the current job
+              setJob(prevJob => (prevJob && prevJob.id.toString() === data.job_id.toString()) ? { ...prevJob, status: data.status } : prevJob);
+              
+              // Show a notification when the job is marked complete
+              if (data.status === 'COMPLETED') {
+                // You can customize this message
+                toast.success(`Job (ID: ${data.job_id}) has been completed!`);
+              }
+              break;
+            // --- END OF FIX ---
+
 
             case "job_taken":
               if (jobRef.current?.id?.toString() === data.job_id?.toString()) {
@@ -297,12 +314,6 @@ export const WebSocketProvider = ({ children }) => {
               }
               break;
             }
-
-
-            case "pong":
-              // optional: update heartbeat
-              break;
-
             default:
               console.log("[WS] Unhandled message type:", data.type);
           }
@@ -636,62 +647,62 @@ export const WebSocketProvider = ({ children }) => {
   };
 
   const completeJob = async (jobId, price) => {
-  console.groupCollapsed("%c[JOB] >>> COMPLETE_JOB TRIGGERED <<<", "color: #00eaff; font-weight: bold;");
-  console.log("[JOB] Job ID:", jobId);
-  console.log("[JOB] Price:", price);
-  console.log("[JOB] jobRef.current:", jobRef.current);
-  console.log("[JOB] basicNeeds?.status:", basicNeeds?.status);
-  console.log("[WS] socketRef.current state:", socketRef.current?.readyState);
-  console.groupEnd();
+    console.groupCollapsed("%c[JOB] >>> COMPLETE_JOB TRIGGERED <<<", "color: #00eaff; font-weight: bold;");
+    console.log("[JOB] Job ID:", jobId);
+    console.log("[JOB] Price:", price);
+    console.log("[JOB] jobRef.current:", jobRef.current);
+    console.log("[JOB] basicNeeds?.status:", basicNeeds?.status);
+    console.log("[WS] socketRef.current state:", socketRef.current?.readyState);
+    console.groupEnd();
 
-  try {
-    const payload = {
-      type: "job_status_update",
-      job_id: jobId,
-      status: "COMPLETED",
-      price,
-    };
+    try {
+      const payload = {
+        type: "job_status_update",
+        job_id: jobId,
+        status: "COMPLETED",
+        price,
+      };
 
-    console.log("[WS] Attempting to send completion payload:", payload);
+      console.log("[WS] Attempting to send completion payload:", payload);
 
-    // Try to send via WebSocket first, fallback to REST
-    await safeSend(
-      payload,
-      async () => {
-        console.log("[WS] REST fallback triggered for completion...");
-        return await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
+      // Try to send via WebSocket first, fallback to REST
+      await safeSend(
+        payload,
+        async () => {
+          console.log("[WS] REST fallback triggered for completion...");
+          return await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
+        }
+      );
+
+      console.log("%c[JOB] ✅ Completion message sent (via WS or REST).", "color: limegreen; font-weight: bold;");
+
+
+      // Update mechanic to ONLINE
+      console.log("[STATUS] Updating mechanic to ONLINE after completion...");
+      await updateStatus("ONLINE");
+
+      setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
+      intendedOnlineState.current = true;
+      setIsOnlineState(true);
+
+      lastClearedJobId.current = jobId?.toString();
+      setJob(null);
+      jobRef.current = null;
+      localStorage.removeItem('acceptedJob');
+
+      navigate('/');
+      toast.success("✅ Job completed successfully!");
+      console.log("%c[JOB] Job completion workflow finished cleanly ✅", "color: limegreen; font-weight: bold;");
+    } catch (err) {
+      console.error("%c[JOB] ❌ Complete job failed:", "color: red; font-weight: bold;", err);
+
+      if (err.response) {
+        console.error("[JOB] Error response:", err.response.status, err.response.data);
       }
-    );
 
-    console.log("%c[JOB] ✅ Completion message sent (via WS or REST).", "color: limegreen; font-weight: bold;");
-
-    
-    // Update mechanic to ONLINE
-    console.log("[STATUS] Updating mechanic to ONLINE after completion...");
-    await updateStatus("ONLINE");
-
-    setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
-    intendedOnlineState.current = true;
-    setIsOnlineState(true);
-
-    lastClearedJobId.current = jobId?.toString();
-    setJob(null);
-    jobRef.current = null;
-    localStorage.removeItem('acceptedJob');
-
-    navigate('/');
-    toast.success("✅ Job completed successfully!");
-    console.log("%c[JOB] Job completion workflow finished cleanly ✅", "color: limegreen; font-weight: bold;");
-  } catch (err) {
-    console.error("%c[JOB] ❌ Complete job failed:", "color: red; font-weight: bold;", err);
-
-    if (err.response) {
-      console.error("[JOB] Error response:", err.response.status, err.response.data);
+      toast.error("Failed to complete job. Please try again.");
     }
-
-    toast.error("Failed to complete job. Please try again.");
-  }
-};
+  };
 
 
   // explicit disconnect
@@ -785,7 +796,7 @@ export const WebSocketProvider = ({ children }) => {
     cancelJob,
     completeJob,
   };
- 
+
   return (
     <WebSocketContext.Provider value={value}>
       {isPublicRoute || isVerified ? children : <UnverifiedPage />}
