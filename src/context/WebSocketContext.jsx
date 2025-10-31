@@ -134,6 +134,11 @@ export const WebSocketProvider = ({ children }) => {
       return;
     }
 
+    if (!intendedOnlineState.current) {
+      console.log("[WS] Mechanic is offline — skipping reconnect.");
+      return;
+    }
+
     console.log("Connecting to WebSocket...");
     setConnectionStatus('connecting');
 
@@ -336,6 +341,26 @@ export const WebSocketProvider = ({ children }) => {
       }
     }
   };
+  const safeSend = async (payload, restFallback = null) => {
+    try {
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify(payload));
+        console.log("[WS] Sent via socket:", payload);
+      } else {
+        console.warn("[WS] Socket not connected — using REST fallback");
+
+        // if REST fallback is provided, call it
+        if (restFallback) await restFallback();
+        else toast.warning("Connection lost. Please retry.");
+
+        // also, attempt reconnection
+        ensureSocketConnected();
+      }
+    } catch (err) {
+      console.error("[WS] safeSend error:", err);
+      if (restFallback) await restFallback();
+    }
+  };
 
   const clearJob = () => {
     if (!jobRef.current) return;
@@ -348,11 +373,25 @@ export const WebSocketProvider = ({ children }) => {
 
 
 
-  const handleSetIsOnline = (newIsOnline) => {
+  const handleSetIsOnline = async (newIsOnline) => {
     console.log("Setting online state to:", newIsOnline);
     intendedOnlineState.current = newIsOnline;
     setIsOnline(newIsOnline);
-    updateStatus(newIsOnline ? 'ONLINE' : 'OFFLINE');
+
+    try {
+      await updateStatus(newIsOnline ? 'ONLINE' : 'OFFLINE');
+
+      if (newIsOnline) {
+        console.log("[WS] Mechanic is online — connecting WebSocket...");
+        await connectWebSocket();
+      } else {
+        console.log("[WS] Mechanic is offline — disconnecting WebSocket...");
+        disconnectWebSocket();
+      }
+    } catch (error) {
+      console.error("[STATUS] Failed to toggle online/offline:", error);
+      toast.error("Failed to update online status.");
+    }
   };
 
 
@@ -513,57 +552,48 @@ export const WebSocketProvider = ({ children }) => {
     try {
       console.log(`[JOB] Cancelling job #${jobId}...`);
 
-      await api.post(`/jobs/CancelServiceRequest/${jobId}/`, { cancellation_reason: reason });
+      await safeSend(
+        { type: "job_status_update", job_id: jobId, status: "CANCELLED", reason },
+        async () => await api.post(`/jobs/CancelServiceRequest/${jobId}/`, { cancellation_reason: reason })
+      );
+
       console.log("[JOB] Job cancelled successfully.");
 
-      // ✅ Clear the job locally
       clearJob();
-
-      // ✅ Update mechanic status to ONLINE again
       await updateStatus("ONLINE");
       setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
       intendedOnlineState.current = true;
       setIsOnline(true);
 
-      // ✅ Optional: reconnect WebSocket if it was closed
-      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-        connectWebSocket();
-      }
-
-      // ✅ Go back to home page
       navigate('/');
     } catch (error) {
       console.error("[JOB] Failed to cancel job:", error);
       toast.error("Failed to cancel job. Please try again.");
-      throw error;
     }
   };
+
   const completeJob = async (jobId, price) => {
     try {
       console.log(`[JOB] Completing job #${jobId}...`);
-      await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price });
-      console.log("[JOB] Job completion sent.");
 
-      // ✅ Return to ONLINE mode
+      await safeSend(
+        { type: "job_status_update", job_id: jobId, status: "COMPLETED", price },
+        async () => await api.post(`/jobs/CompleteServiceRequest/${jobId}/`, { price })
+      );
+
       await updateStatus("ONLINE");
       setBasicNeeds(prev => ({ ...prev, status: "ONLINE" }));
       intendedOnlineState.current = true;
       setIsOnline(true);
 
-      // ✅ Optional: reconnect WebSocket if closed
-      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-        connectWebSocket();
-      }
-
-      // ✅ Clear current job and return to home
       clearJob();
       navigate('/');
     } catch (error) {
       console.error("[JOB] Failed to complete job:", error);
       toast.error("Failed to complete job. Please try again.");
-      throw error;
     }
   };
+
 
 
   // Add this useEffect to handle 401 errors

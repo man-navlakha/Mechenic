@@ -5,7 +5,9 @@ import { useWebSocket } from '@/context/WebSocketContext';
 
 export default function Dashboard() {
   const mapRef = useRef(null);
-  const { job, basicNeeds, isOnline, isVerified } = useWebSocket();
+  const ws = useWebSocket() || {};
+  const { isOnline = false, isVerified = false, basicNeeds = null, job = null } = ws;
+
   const markersRef = useRef([]);
   const [map, setMap] = useState(null);
   const [mechanicPosition, setMechanicPosition] = useState(null);
@@ -14,10 +16,10 @@ export default function Dashboard() {
   const [lastLocationUpdate, setLastLocationUpdate] = useState(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const currentStatus = job?.status === "WORKING"
-  ? "WORKING"
-  : basicNeeds?.status === "ONLINE"
-  ? "ONLINE"
-  : "OFFLINE";
+    ? "WORKING"
+    : basicNeeds?.status === "ONLINE"
+      ? "ONLINE"
+      : "OFFLINE";
 
   // Track initialization state
   const initStateRef = useRef({
@@ -477,18 +479,18 @@ export default function Dashboard() {
   return (
     <div className="relative h-screen w-screen flex flex-col overflow-hidden">
       {currentStatus === "WORKING" && job && (
-  <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-3 rounded shadow-lg flex items-center justify-between max-w-3xl w-full">
-    <div>
-      <strong>Current Job:</strong> #{job.id} - {job.problem || job.details}
-    </div>
-    <button
-      onClick={() => navigate(`/job/${job.id}`)}
-      className="bg-white text-blue-600 font-semibold px-3 py-1 rounded hover:bg-gray-100 transition"
-    >
-      Go to Job
-    </button>
-  </div>
-)}
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-3 rounded shadow-lg flex items-center justify-between max-w-3xl w-full">
+          <div>
+            <strong>Current Job:</strong> #{job.id} - {job.problem || job.details}
+          </div>
+          <button
+            onClick={() => navigate(`/job/${job.id}`)}
+            className="bg-white text-blue-600 font-semibold px-3 py-1 rounded hover:bg-gray-100 transition"
+          >
+            Go to Job
+          </button>
+        </div>
+      )}
 
       <Navbar
         mechanicName={basicNeeds ? `${basicNeeds.first_name} ${basicNeeds.last_name}` : "Loading..."}
@@ -550,22 +552,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
-        {/* Location update info */}
-        {lastLocationUpdate && locationStatus === "success" && (
-          <div className="absolute top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded text-sm">
-            <div className="flex items-center space-x-2">
-              <span>📍 Updated: {lastLocationUpdate.toLocaleTimeString()}</span>
-              <button
-                onClick={refreshLocation}
-                className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors"
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
-        )}
-
 
         <RightPanel
           shopName={basicNeeds?.shop_name}

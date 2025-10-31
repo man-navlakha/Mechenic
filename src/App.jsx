@@ -129,7 +129,7 @@ const AppContent = () => {
               <Profile />
             </Protected>
           } />
-           <Route path="/job/:id" element={<JobDetailsPage />} />
+          <Route path="/job/:id" element={<JobDetailsPage />} />
 
           {/* You can add a "Not Found" route as a fallback */}
           {/* <Route path="*" element={<NotFound />} /> */}
@@ -146,7 +146,6 @@ function App() {
     // 3. The Providers and Router wrap the AppContent
     <LockProvider>
       <WebSocketProvider>
-
         <AppContent />
       </WebSocketProvider>
     </LockProvider>

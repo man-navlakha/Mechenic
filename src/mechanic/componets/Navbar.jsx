@@ -1,6 +1,6 @@
 import React from 'react'; // Removed unused hooks: useState, useEffect, useRef
 import { Link, useNavigate } from 'react-router-dom';
-import {User, Lock, LogOut, Menu, BadgeCheck } from 'lucide-react'; // Removed unused ChevronDown
+import { User, Lock, LogOut, Menu, BadgeCheck } from 'lucide-react'; // Removed unused ChevronDown
 import { useLock } from '../../context/LockContext';
 import { useWebSocket } from '@/context/WebSocketContext';
 
@@ -25,9 +25,10 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useLocation } from "react-router-dom";
 
-const Navbar = () => { // Removed unused {} from props
-  // FIXED: The useWebSocket hook is now called inside the component.
-  const { isOnline, isVerified, basicNeeds, job } = useWebSocket();
+const Navbar = () => {
+  const ws = useWebSocket() || {};
+  const { isOnline = false, isVerified = false, basicNeeds = null, job = null } = ws;
+
   const { lockScreen } = useLock();
   const navigate = useNavigate();
   const location = useLocation();
