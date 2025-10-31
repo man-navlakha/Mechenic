@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
 
 export default function StatusSwitch() {
-  const { isOnline, setIsOnline, isVerified, connectionStatus, basicNeeds } = useWebSocket();
+  const { isOnline, setIsOnline, isVerified, connectionStatus, basicNeeds } =  useWebSocket() ?? {};
   const [loading, setLoading] = useState(false);
 
   const toggleStatus = async (checked) => {
@@ -63,7 +63,7 @@ export default function StatusSwitch() {
           <Switch
             checked={isOnline && basicNeeds?.status !== "WORKING"} // disable toggle when working
             onCheckedChange={toggleStatus}
-            disabled={!isVerified || loading || basicNeeds?.status === "WORKING"}
+            disabled={!isVerified || loading }
             className={!isVerified ? "opacity-50 cursor-not-allowed" : ""}
           />
           <div className="flex items-start space-x-2">
@@ -71,7 +71,7 @@ export default function StatusSwitch() {
               {statusLabel}
             </div>
 
-            {isOnline && basicNeeds?.status !== "WORKING" && (
+         
               <div className="flex items-center space-x-1">
                 {getConnectionStatusIcon()}
                 <span className={`
@@ -83,7 +83,6 @@ export default function StatusSwitch() {
                   {getConnectionStatusText()}
                 </span>
               </div>
-            )}
           </div>
         </div>
         :

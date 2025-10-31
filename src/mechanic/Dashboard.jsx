@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Navbar from "../mechanic/componets/Navbar";
 import RightPanel from "./componets/RightPanel";
 import { useWebSocket } from '@/context/WebSocketContext';
+import api from "../utils/api"; 
 
 export default function Dashboard() {
   const mapRef = useRef(null);
@@ -15,6 +16,9 @@ export default function Dashboard() {
   const [locationStatus, setLocationStatus] = useState("getting");
   const [lastLocationUpdate, setLastLocationUpdate] = useState(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [nearbyJobs, setNearbyJobs] = useState([]); // State for available jobs
+  const [pastJobs, setPastJobs] = useState([]); // State for past jobs
+
   const currentStatus = job?.status === "WORKING"
     ? "WORKING"
     : basicNeeds?.status === "ONLINE"
@@ -34,7 +38,7 @@ export default function Dashboard() {
   useEffect(() => {
     const checkLocationSupport = () => {
       if (!navigator.geolocation) {
-        console.error("Geolocation is not supported by this browser");
+        // console.error("Geolocation is not supported by this browser");
         setLocationStatus("unsupported");
         setShowLocationPrompt(true);
         setMechanicPosition({ lat: 23.0225, lng: 72.5714 });
@@ -64,7 +68,7 @@ export default function Dashboard() {
         lat: position.coords.latitude,
         lng: position.coords.longitude
       };
-      console.log("Location updated:", newPosition, new Date().toLocaleTimeString());
+      // console.log("Location updated:", newPosition, new Date().toLocaleTimeString());
       setMechanicPosition(newPosition);
       setLocationStatus("success");
       setLastLocationUpdate(new Date());
@@ -75,7 +79,7 @@ export default function Dashboard() {
     };
 
     const errorCallback = (error) => {
-      console.error("Geolocation error:", error.message);
+      // console.error("Geolocation error:", error.message);
 
       switch (error.code) {
         case error.PERMISSION_DENIED:
@@ -118,7 +122,7 @@ export default function Dashboard() {
     const intervalTime = Math.random() * 60000 + 180000; // 3-4 minutes in milliseconds
     const intervalId = setInterval(getLocation, intervalTime);
 
-    console.log(`Location update interval set to ${Math.round(intervalTime / 1000)} seconds`);
+    // console.log(`Location update interval set to ${Math.round(intervalTime / 1000)} seconds`);
 
     return () => {
       if (intervalId) {
@@ -138,7 +142,7 @@ export default function Dashboard() {
         mechanicMarker.remove();
         markersRef.current = markersRef.current.filter(m => !m._isMechanicMarker);
       } catch (error) {
-        console.warn("Error removing old mechanic marker:", error);
+        // console.warn("Error removing old mechanic marker:", error);
       }
     }
 
@@ -178,7 +182,7 @@ export default function Dashboard() {
         mapRef.current.setCenter(newPosition);
       }
     } catch (error) {
-      console.warn("Error updating mechanic marker:", error);
+      // console.warn("Error updating mechanic marker:", error);
     }
   };
 
@@ -202,7 +206,7 @@ export default function Dashboard() {
 
   // Function to handle location enable button click
   const handleEnableLocation = () => {
-    console.log("User clicked enable location button");
+    // console.log("User clicked enable location button");
     getLocation();
   };
 
@@ -254,7 +258,7 @@ export default function Dashboard() {
 
       const container = document.getElementById("map");
       if (!container) {
-        console.warn("Map container not found, retrying...");
+        // console.warn("Map container not found, retrying...");
         if (initStateRef.current.retryCount < 3) {
           initStateRef.current.retryCount++;
           setTimeout(initializeMap, 500);
@@ -263,7 +267,7 @@ export default function Dashboard() {
       }
 
       if (!window.mappls || !window.mappls.Map) {
-        console.warn("Mappls SDK not available, retrying...");
+        // console.warn("Mappls SDK not available, retrying...");
         if (initStateRef.current.retryCount < 3) {
           initStateRef.current.retryCount++;
           setTimeout(initializeMap, 500);
@@ -277,7 +281,7 @@ export default function Dashboard() {
       setMapStatus("loading");
 
       try {
-        console.log("Creating Mappls map instance with position:", mechanicPosition);
+        // console.log("Creating Mappls map instance with position:", mechanicPosition);
 
         // Create map with current mechanic position
         const mapInstance = new window.mappls.Map("map", {
@@ -291,7 +295,7 @@ export default function Dashboard() {
         // Use both load event and timeout as fallback
         const loadTimeout = setTimeout(() => {
           if (isMounted && !initStateRef.current.initialized) {
-            console.log("Map load timeout, proceeding anyway...");
+            // console.log("Map load timeout, proceeding anyway...");
             onMapReady(mapInstance);
           }
         }, 5000);
@@ -305,7 +309,7 @@ export default function Dashboard() {
 
         mapInstance.on("error", (error) => {
           clearTimeout(loadTimeout);
-          console.error("Map error event:", error);
+          // console.error("Map error event:", error);
           if (isMounted) {
             setMapStatus("error");
             initStateRef.current.initializing = false;
@@ -313,7 +317,7 @@ export default function Dashboard() {
         });
 
       } catch (error) {
-        console.error("Error creating map instance:", error);
+        // console.error("Error creating map instance:", error);
         if (isMounted) {
           setMapStatus("error");
           initStateRef.current.initializing = false;
@@ -322,7 +326,7 @@ export default function Dashboard() {
     };
 
     const onMapReady = (mapInstance) => {
-      console.log("Map ready with position:", mechanicPosition);
+      // console.log("Map ready with position:", mechanicPosition);
       initStateRef.current.initialized = true;
       initStateRef.current.initializing = false;
       setMap(mapInstance);
@@ -344,7 +348,7 @@ export default function Dashboard() {
       script.defer = true;
 
       script.onload = () => {
-        console.log("Mappls SDK loaded successfully");
+        // console.log("Mappls SDK loaded successfully");
         initStateRef.current.sdkLoaded = true;
         if (isMounted) {
           setTimeout(initializeMap, 100);
@@ -352,7 +356,7 @@ export default function Dashboard() {
       };
 
       script.onerror = () => {
-        console.error("Failed to load Mappls SDK");
+        // console.error("Failed to load Mappls SDK");
         if (isMounted) {
           setMapStatus("error");
         }
@@ -367,7 +371,7 @@ export default function Dashboard() {
     // Cleanup
     return () => {
       isMounted = false;
-      console.log("Dashboard unmounting, cleaning up map...");
+      // console.log("Dashboard unmounting, cleaning up map...");
       cleanupMap();
     };
   }, [mechanicPosition]);
@@ -395,12 +399,12 @@ export default function Dashboard() {
       marker._isMechanicMarker = true;
       markersRef.current.push(marker);
     } catch (error) {
-      console.warn("Error adding mechanic marker:", error);
+      // console.warn("Error adding mechanic marker:", error);
     }
   };
 
   const cleanupMap = () => {
-    console.log("Cleaning up map resources...");
+    // console.log("Cleaning up map resources...");
 
     // Clear markers
     markersRef.current.forEach(marker => {
@@ -409,7 +413,7 @@ export default function Dashboard() {
           marker.remove();
         }
       } catch (error) {
-        console.warn("Error removing marker:", error);
+        // console.warn("Error removing marker:", error);
       }
     });
     markersRef.current = [];
@@ -419,7 +423,7 @@ export default function Dashboard() {
       try {
         mapRef.current = null;
       } catch (error) {
-        console.warn("Error during map cleanup:", error);
+        // console.warn("Error during map cleanup:", error);
       }
     }
 
@@ -428,53 +432,160 @@ export default function Dashboard() {
     setMap(null);
   };
 
-  // Job markers effect
+  // This effect now fetches dynamic jobs AND past jobs
+  useEffect(() => {
+    // Helper to clear all job-related markers
+    const clearJobMarkers = () => {
+      const jobMarkers = markersRef.current.filter(m => m._isJobMarker || m._isPastJobMarker);
+      jobMarkers.forEach(marker => {
+        try {
+          if (marker && marker.remove) marker.remove();
+        } catch (error) {
+          // console.warn("Error removing job marker:", error);
+        }
+      });
+      markersRef.current = markersRef.current.filter(m => !m._isJobMarker && !m._isPastJobMarker);
+      setNearbyJobs([]);
+      setPastJobs([]); // Clear past jobs state too
+    };
+
+    // Ensure map is loaded
+    if (mapStatus !== "loaded" || !map) {
+      clearJobMarkers(); // Clear markers if map is not ready
+      return;
+    }
+
+    // Fetch Available Nearby Jobs
+    const fetchNearbyJobs = async () => {
+      if (!isOnline) { // Only fetch nearby jobs if online
+        setNearbyJobs([]); // Clear nearby jobs if offline
+        return;
+      }
+      try {
+        // Simulating an API call for nearby jobs
+        const dynamicJobs = [
+            { id: 1, position: { lat: 23.03, lng: 72.58 }, details: "Dynamic: Flat Tire", payout: "₹500" },
+            { id: 2, position: { lat: 23.01, lng: 72.56 }, details: "Dynamic: Battery Jumpstart", payout: "₹700" },
+        ];
+        // In a real implementation:
+        // const response = await api.get('/api/jobs/nearby/');
+        // const dynamicJobs = response.data.jobs || [];
+
+        setNearbyJobs(dynamicJobs); // Set state for available jobs
+
+      } catch (err) {
+        // console.error("Failed to fetch nearby jobs:", err);
+      }
+    };
+
+    // Fetch Past Job History
+    const fetchPastJobs = async () => {
+      try {
+        // This is the call you requested, similar to RightPanel.jsx
+        const response = await api.get('/Profile/MechanicHistory/');
+        const history = response.data.job_history || [];
+        
+        // Filter for completed jobs and format for the map
+        const completedJobs = history
+          .filter(job => job.status === 'COMPLETED' && job.latitude && job.longitude)
+          .map(job => ({
+            id: job.id,
+            position: { lat: parseFloat(job.latitude), lng: parseFloat(job.longitude) },
+            details: job.problem,
+            payout: `₹${job.price || 0}`
+          }));
+
+        setPastJobs(completedJobs); // Set state for past jobs
+
+      } catch (err) {
+        // console.error("Failed to fetch past jobs:", err);
+      }
+    };
+
+    // --- Execution ---
+
+    // Clear all existing job markers first
+    clearJobMarkers();
+
+    // Fetch both sets of data
+    fetchNearbyJobs(); // Fetches nearby jobs only if online
+    fetchPastJobs(); // Always fetches past jobs
+
+    // Set up intervals
+    const nearbyJobInterval = setInterval(fetchNearbyJobs, 180000); // 3 min refresh for nearby
+    const pastJobInterval = setInterval(fetchPastJobs, 600000); // 10 min refresh for history (less frequent)
+
+    return () => {
+      clearInterval(nearbyJobInterval);
+      clearInterval(pastJobInterval);
+    };
+
+  }, [isOnline, map, mapStatus]); // Re-run if online status or map changes
+  
+  // This new effect runs when the job lists change
   useEffect(() => {
     if (mapStatus !== "loaded" || !map) return;
 
-    const jobRequests = [
-      { id: 1, position: { lat: 23.03, lng: 72.58 }, details: "Flat Tire Change", payout: "₹500" },
-      { id: 2, position: { lat: 23.01, lng: 72.56 }, details: "Battery Jumpstart", payout: "₹700" },
-      { id: 3, position: { lat: 23.04, lng: 72.57 }, details: "Engine Diagnostic", payout: "₹1200" },
-    ];
-
-    // Clear only job markers
-    const jobMarkers = markersRef.current.filter(m => m._isJobMarker);
-    jobMarkers.forEach(marker => {
+    // 1. Clear old job markers (defensive clear)
+    const oldJobMarkers = markersRef.current.filter(m => m._isJobMarker || m._isPastJobMarker);
+    oldJobMarkers.forEach(marker => {
       try {
         if (marker && marker.remove) marker.remove();
+      } catch (e) { /* ignore */ }
+    });
+    markersRef.current = markersRef.current.filter(m => !m._isJobMarker && !m._isPastJobMarker);
+
+    // 2. Add markers for PAST jobs (greyed out checkmark)
+    pastJobs.forEach(job => {
+      try {
+        const marker = new window.mappls.Marker({
+          map: map,
+          position: job.position,
+          html: `<div style="font-size:1.5rem; opacity: 0.6;">✅</div>`, // Past job icon
+          popupHtml: `
+            <div style="font-family: sans-serif;">
+              <h3 style="font-weight: bold; font-size: 14px; color: #555;">Past Job: ${job.details}</h3>
+              <p style="color: #333;">Completed - ${job.payout}</p>
+            </div>
+          `,
+        });
+        marker._isPastJobMarker = true; // Mark as past job
+        markersRef.current.push(marker);
       } catch (error) {
-        console.warn("Error removing job marker:", error);
+        // console.warn("Error creating past job marker:", error);
       }
     });
-    markersRef.current = markersRef.current.filter(m => !m._isJobMarker);
 
-    // Add new job markers if online
+    // 3. Add markers for NEARBY jobs (blue wrench) - only if online
     if (isOnline) {
-      jobRequests.forEach(job => {
+      nearbyJobs.forEach(job => {
         try {
           const marker = new window.mappls.Marker({
             map: map,
             position: job.position,
-            html: `<div style="font-size:2rem;">⚒️</div>`,
+            html: `<div style="font-size:2rem;">⚒️</div>`, // Available job icon
             popupHtml: `
               <div style="font-family: sans-serif;">
                 <h3 style="font-weight: bold; font-size: 14px;">${job.details}</h3>
                 <p>Estimated Payout: <span style="color: green; font-weight: 600;">${job.payout}</span></p>
-                <button style="margin-top:5px; padding:4px 8px; background:#3B82F6; color:white; border:none; border-radius:4px; cursor:pointer;">
+                <button 
+                  style="margin-top:5px; padding:4px 8px; background:#3B82F6; color:white; border:none; border-radius:4px; cursor:pointer;"
+                  onclick="alert('This button is for display. Use the popup to accept jobs.')"
+                >
                   Accept Job
                 </button>
               </div>
             `,
           });
-          marker._isJobMarker = true;
+          marker._isJobMarker = true; // Mark as available job
           markersRef.current.push(marker);
         } catch (error) {
-          console.warn("Error creating job marker:", error);
+          // console.warn("Error creating dynamic job marker:", error);
         }
       });
     }
-  }, [isOnline, map, mapStatus]);
+
+  }, [map, mapStatus, isOnline, nearbyJobs, pastJobs]); // Re-draw markers when lists change
 
   return (
     <div className="relative h-screen w-screen flex flex-col overflow-hidden">

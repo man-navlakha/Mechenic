@@ -138,7 +138,7 @@ const RightPanel = ({ shopName }) => {
   const [currentOrder, setCurrentOrder] = useState(null);
   const [detailsSheetOpen, setDetailsSheetOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const { isOnline, basicNeeds } = useWebSocket();
+  const { isOnline, basicNeeds } =  useWebSocket() ?? {};
   
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -33,7 +33,10 @@ const getDistanceInKm = (lat1, lon1, lat2, lon2) => { const R = 6371; const dLat
 // --- START: Main JobDetailsPage Component ---
 export default function JobDetailsPage() {
     const { id } = useParams();
-   const { job: contextJob, cancelJob, completeJob, socket } = useWebSocket();
+   const { job: contextJob, completeJob, cancelJob } = useWebSocket();
+
+
+   
     const [job, setJob] = useState(contextJob || null);
     const [loading, setLoading] = useState(false);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);

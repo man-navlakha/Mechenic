@@ -18,7 +18,6 @@ import Protected from './ProtectedRoute'
 // Import the lock screen functionality
 import { LockProvider, useLock } from './context/LockContext';
 import LockScreen from './mechanic/componets/LockScreen';
-import { WebSocketProvider } from './context/WebSocketContext';
 import MechanicVerification from './mechanic/componets/admin/MechanicVerification';
 import LegalPages from './mechanic/page/LegalPages';
 import JobDetailsPage from "@/mechanic/page/JobDetailsPage";
@@ -145,9 +144,7 @@ function App() {
   return (
     // 3. The Providers and Router wrap the AppContent
     <LockProvider>
-      <WebSocketProvider>
         <AppContent />
-      </WebSocketProvider>
     </LockProvider>
   );
 }
