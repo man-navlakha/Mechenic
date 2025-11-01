@@ -42,11 +42,12 @@ export const WebSocketProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const publicRoutes = ['/login', '/logout', '/form', '/verify'];
+  const publicRoutes = ['/login', '/logout', '/form', '/verify', '/kyc',];
   const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route));
   const isOnJobPage =
     location.pathname.startsWith("/job/") ||
     location.pathname.startsWith("/login") ||
+    location.pathname.startsWith("/kyc") ||
     location.pathname.startsWith("/verify");
 
   // local mirrors & helpers
