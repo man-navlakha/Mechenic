@@ -33,7 +33,7 @@ const getDistanceInKm = (lat1, lon1, lat2, lon2) => { const R = 6371; const dLat
 // --- START: Main JobDetailsPage Component ---
 export default function JobDetailsPage() {
     const { id } = useParams();
-    const { job: contextJob, completeJob, cancelJob, socket } = useWebSocket();
+    const { job: contextJob, completeJob, cancelJob, socket, mechanicCoords } = useWebSocket();
     const [job, setJob] = useState(contextJob || null);
     const [loading, setLoading] = useState(false);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -60,37 +60,16 @@ export default function JobDetailsPage() {
         }
     }, [id, contextJob]);
 
-    useEffect(() => {
-        const lat = parseFloat(job?.latitude);
-        const lng = parseFloat(job?.longitude);
-        if (isNaN(lat) || isNaN(lng)) return;
+    // Subscribe to provider's mechanicCoords and update local UI state
+useEffect(() => {
+  if (!job) return; // no job yet
+  // get coords from context
+  // useWebSocket below already used earlier at top: const { job: contextJob, completeJob, cancelJob, socket } = useWebSocket();
+  // So replace socket in that destructure with mechanicCoords as well:
+}, []); // placeholder - we'll update the destructure above
 
-        const watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                const dist = getDistanceInKm(latitude, longitude, lat, lng);
-                setDistanceFromJob(dist);
-                setMechanicCurrentLocation({ lat: latitude, lng: longitude });
 
-                // 4. ADD THIS BLOCK: Send the real-time location over the WebSocket
-                if (socket && socket.readyState === WebSocket.OPEN && job?.id) {
-                    socket.send(JSON.stringify({
-                        type: "location_update",
-                        latitude,
-                        longitude,
-                        request_id: job.id // This is the crucial part the user's app needs
-                    }));
-                }
-            },
-            (error) => {
-                console.error("Geolocation error:", error);
-                alert("Could not get your location. Please enable location services.");
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-        return () => navigator.geolocation.clearWatch(watchId);
-    }, [job, socket]); // 5. Add 'socket' to the dependency array
-
+    
 
     // --- FIX: Centralized function to safely update map markers ---
     const updateMapMarkers = useCallback(() => {
@@ -180,6 +159,25 @@ export default function JobDetailsPage() {
             updateMapMarkers();
         }
     }, [mechanicCurrentLocation, updateMapMarkers]);
+// when provider reports new mechanic coords, update local marker and distance
+useEffect(() => {
+  if (!mechanicCoords || !job) return;
+
+  const latitude = parseFloat(mechanicCoords.latitude);
+  const longitude = parseFloat(mechanicCoords.longitude);
+  if (Number.isNaN(latitude) || Number.isNaN(longitude)) return;
+
+  // update local state used by map marker updater
+  setMechanicCurrentLocation({ lat: latitude, lng: longitude });
+
+  // compute distance to job
+  const jobLat = parseFloat(job.latitude);
+  const jobLng = parseFloat(job.longitude);
+  if (!Number.isNaN(jobLat) && !Number.isNaN(jobLng)) {
+    const dist = getDistanceInKm(latitude, longitude, jobLat, jobLng);
+    setDistanceFromJob(dist);
+  }
+}, [mechanicCoords, job]);
 
 
     if (!job) {

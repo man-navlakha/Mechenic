@@ -115,22 +115,6 @@ export default function Dashboard() {
     navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
   };
 
-  // Set up periodic location updates once we have initial permission
-  useEffect(() => {
-    if (locationStatus !== "success") return;
-
-    const intervalTime = Math.random() * 60000 + 180000; // 3-4 minutes in milliseconds
-    const intervalId = setInterval(getLocation, intervalTime);
-
-    // console.log(`Location update interval set to ${Math.round(intervalTime / 1000)} seconds`);
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [locationStatus]);
-
   // Update mechanic marker when position changes
   const updateMechanicMarker = (newPosition) => {
     if (!mapRef.current) return;

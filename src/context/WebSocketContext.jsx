@@ -26,7 +26,7 @@ export const WebSocketProvider = ({ children }) => {
   const [isVerified, setIsVerified] = useState(false);
   const [basicNeeds, setBasicNeeds] = useState(null);
   const [job, setJob] = useState(null);
-
+  const [mechanicCoords, setMechanicCoords] = useState(null);
   const jobRef = useRef(null);
   const lastClearedJobId = useRef(null);
   const jobTimeoutRef = useRef(null);
@@ -36,6 +36,11 @@ export const WebSocketProvider = ({ children }) => {
   const pendingMessages = useRef([]); // queue for messages to be sent when ws reconnects
   const pingIntervalRef = useRef(null);
   const userInteracted = useRef(false);
+  const latestCoordsRef = useRef(null);           // { latitude, longitude, ts }
+  const locationWatchIdRef = useRef(null);        // id from navigator.geolocation.watchPosition
+  const locationIntervalRef = useRef(null);       // publisher interval id
+  const locationPublishIntervalMs = 4000;         // 4s default (in range 3000-6000). Change as needed.
+
   const audioRef = useRef(new Audio('/sounds/alert-33762.mp3'));
   const jobNotificationSound = useRef(new Audio('/sounds/reliable-safe-327618.mp3'));
 
@@ -98,6 +103,16 @@ export const WebSocketProvider = ({ children }) => {
     }
   }, 800);
 
+  const sendLocationUpdate = (latitude, longitude, jobId) => {
+    const message = {
+      type: 'location_update',
+      latitude: latitude,
+      longitude: longitude,
+      job_id: jobId || null, // Send job_id if it exists, otherwise null
+    };
+    sendMessage(message);
+  };
+
   // ===== fetch initial status from server (basic_needs) =====
   const fetchInitialStatus = async () => {
     try {
@@ -135,6 +150,82 @@ export const WebSocketProvider = ({ children }) => {
       }
     }
   };
+
+  // Start watching device and publish latest coords every `locationPublishIntervalMs`
+  const startLocationPublisher = () => {
+    if (!("geolocation" in navigator)) {
+      console.warn("[LOC] Geolocation not supported.");
+      return;
+    }
+    // If already running, skip
+    if (locationWatchIdRef.current || locationIntervalRef.current) return;
+
+    try {
+      // watchPosition updates latestCoordsRef as soon as device provides.
+      const success = (pos) => {
+        const c = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          ts: Date.now(),
+        };
+        latestCoordsRef.current = c;
+        setMechanicCoords(c);
+      };
+
+      const error = (err) => {
+        console.warn("[LOC] watchPosition error:", err);
+        // we don't stop on error; browser may recover
+      };
+
+      const watchId = navigator.geolocation.watchPosition(success, error, {
+        enableHighAccuracy: true,
+        maximumAge: 2000,
+        timeout: 10000,
+      });
+      locationWatchIdRef.current = watchId;
+
+      // Publisher interval: sends last known coords every X ms
+      locationIntervalRef.current = setInterval(() => {
+        const coords = latestCoordsRef.current;
+        if (!coords) return; // nothing to send yet
+        const jobId = jobRef.current?.id ?? null;
+        // Use safeSend to allow queueing/fallback
+        const payload = {
+          type: "location_update",
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          job_id: jobId,
+          ts: coords.ts,
+        };
+        // Try WS send; if socket closed it'll queue via safeSend or queueMessage
+        safeSend(payload).catch((e) => {
+          console.warn("[LOC] safeSend failed (queued):", e);
+        });
+      }, locationPublishIntervalMs);
+
+      console.log("[LOC] Location publisher started (watchId, interval):", watchId, locationIntervalRef.current);
+    } catch (err) {
+      console.error("[LOC] startLocationPublisher failed:", err);
+    }
+  };
+
+  const stopLocationPublisher = () => {
+    try {
+      if (locationWatchIdRef.current) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+        locationWatchIdRef.current = null;
+      }
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current);
+        locationIntervalRef.current = null;
+      }
+      latestCoordsRef.current = null;
+      console.log("[LOC] Location publisher stopped.");
+    } catch (err) {
+      console.warn("[LOC] stopLocationPublisher error:", err);
+    }
+  };
+
 
   // ===== connect logic with token fetch and event handlers =====
   const connectWebSocket = async () => {
@@ -208,6 +299,7 @@ export const WebSocketProvider = ({ children }) => {
 
         // flush any queued messages
         flushQueue();
+        startLocationPublisher();
 
         // Revalidate current job (important after reconnect)
         if (jobRef.current?.id) {
@@ -381,6 +473,7 @@ export const WebSocketProvider = ({ children }) => {
         setConnectionStatus("disconnected");
         connectionStatusRef.current = "disconnected";
 
+        stopLocationPublisher();
         if (pingIntervalRef.current) {
           clearInterval(pingIntervalRef.current);
           pingIntervalRef.current = null;
@@ -760,6 +853,7 @@ export const WebSocketProvider = ({ children }) => {
   const disconnectWebSocket = () => {
     console.log("[WS] Disconnecting by request...");
     intendedOnlineState.current = false;
+    stopLocationPublisher();
     if (socketRef.current) {
       try { socketRef.current.close(1000, "User initiated disconnect"); } catch (e) { }
       socketRef.current = null;
@@ -826,11 +920,11 @@ export const WebSocketProvider = ({ children }) => {
     clearTimeout(jobTimeoutRef.current);
   };
   const clearJob = () => {
-      lastClearedJobId.current = jobRef.current?.id?.toString();
-      setJob(null);
-      jobRef.current = null;
-      localStorage.removeItem('acceptedJob');
-    }
+    lastClearedJobId.current = jobRef.current?.id?.toString();
+    setJob(null);
+    jobRef.current = null;
+    localStorage.removeItem('acceptedJob');
+  }
   // Provider value
   const value = {
     socket,
@@ -843,9 +937,10 @@ export const WebSocketProvider = ({ children }) => {
     disconnectWebSocket,
     job,
     sendJobStatus: safeSend,
-    
+    sendLocationUpdate,
     cancelJob,
     completeJob,
+    mechanicCoords,
   };
 
   return (
