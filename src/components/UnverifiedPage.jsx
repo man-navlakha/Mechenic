@@ -1,7 +1,7 @@
 // src/components/UnverifiedPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BadgeCheck, Loader } from 'lucide-react';
+import { BadgeCheck, Loader, Clock } from 'lucide-react'; // Added Clock for pending
 import api from '@/utils/api';
 import Navbar from '@/mechanic/componets/Navbar';
 
@@ -25,8 +25,6 @@ const UnverifiedPage = () => {
     fetchProfile();
   }, []);
 
-  const hasKyc = profileData?.KYC_document;
-
   const renderContent = () => {
     if (loading) {
       return (
@@ -37,43 +35,74 @@ const UnverifiedPage = () => {
       );
     }
 
-    const isVerified = hasKyc;
+    const isVerified = profileData?.is_verified;
+    const hasSubmittedKyc = !!profileData?.KYC_document; // Use !! to cast to boolean
 
+    // State 1: VERIFIED
+    if (isVerified) {
+      return (
+        <>
+          <BadgeCheck className="w-16 h-16 mb-4 text-green-500" />
+          <h1 className="text-2xl font-semibold mb-2 text-green-600">
+            Account Verified
+          </h1>
+          <p className="text-gray-700 mb-6">
+            Your account has been successfully verified. You can now access all features.
+          </p>
+          <button
+            onClick={() => navigate('/')} // Navigate to mechanic dashboard
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
+          >
+            Go to Dashboard
+          </button>
+        </>
+      );
+    }
+
+    // State 2: PENDING (Submitted but not verified)
+    if (hasSubmittedKyc) {
+      return (
+        <>
+          <Clock className="w-16 h-16 mb-4 text-yellow-500" />
+          <h1 className="text-2xl font-semibold mb-2 text-yellow-600">
+            Verification Pending
+          </h1>
+          <p className="text-gray-700 mb-6">
+            Your KYC document has been submitted and is awaiting review. This may take 24-48 hours.
+          </p>
+       
+        </>
+      );
+    }
+
+    // State 3: NOT VERIFIED (Nothing submitted)
     return (
       <>
-        <BadgeCheck className={`w-16 h-16 mb-4 ${isVerified ? 'text-green-500' : 'text-red-500'}`} />
-        <h1 className={`text-2xl font-semibold mb-2 ${isVerified ? 'text-green-600' : 'text-red-600'}`}>
-          {isVerified ? 'Account is Verified' : 'Account Not Verified'}
+        <BadgeCheck className="w-16 h-16 mb-4 text-red-500" />
+        <h1 className="text-2xl font-semibold mb-2 text-red-600">
+          Account Not Verified
         </h1>
         <p className="text-gray-700 mb-6">
-          {isVerified
-            ? 'Your account has been successfully verified.'
-            : 'Your account is not verified yet. Please complete your KYC or contact support.'}
+          Please complete your KYC to get full access to your mechanic profile.
         </p>
-
         <button
-          onClick={() => navigate(isVerified ? '/' : '/form')}
-          className={`${
-            isVerified
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : 'bg-yellow-500 hover:bg-yellow-600'
-          } text-white px-4 py-2 rounded-md transition`}
+          onClick={() => navigate('/form')} // Navigate to the KYC form
+          className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition"
         >
-          {isVerified ? 'Go to Home' : 'Complete Your KYC'}
+          Complete Your KYC
         </button>
       </>
     );
   };
 
   return (
-    <div className='min-h-screen  '>
+    <div className='min-h-screen'>
       <Navbar />
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
-
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center flex flex-col items-center justify-center">
-        {renderContent()}
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center flex flex-col items-center justify-center">
+          {renderContent()}
+        </div>
       </div>
-    </div>
     </div>
   );
 };
